@@ -31,8 +31,8 @@ private:
     static constexpr uint64_t M_ = 4294967291ULL; //μεγάλο prime κοντά στο 2^32
     int table_size_ = 1; //TableSize = n/4 ή n/8, ορίζεται στο build_index
 
-    //πίνακες hash: L × TableSize, κάθε bucket έχει λίστα IDs
-    vector<vector<vector<int>>> tables_;
+    //κάθε bucket: λίστα (ID, index)
+    vector<vector<vector<pair<uint64_t,int>>>> tables_;
 
     //τυχαία διανύσματα v ∼ N(0,1)^d (L × k × d) 
     vector<vector<vector<float>>> v_;
@@ -49,8 +49,11 @@ private:
     //h(p) = floor((p·v + t) / w) για κάθε hash function 
     vector<long long> compute_hashes_for_table(const vector<float>& p, int table_idx) const;
 
-    //g(p) = (Σ r_j * h_j(p) mod M) mod TableSize
-    int compute_bucket_id(const vector<long long>& hashes, int table_idx) const;
+    //ID(p) = (Σ r_j * h_j(p)) mod M
+    uint64_t compute_id(const vector<long long>& hashes, int table_idx) const;
+
+    //g(p) = ID(p) mod TableSize
+    int compute_bucket_id(uint64_t id) const;
 
     //ευκλείδεια απόσταση
     float euclidean_distance_sq(const vector<float>& x, const vector<float>& y) const;

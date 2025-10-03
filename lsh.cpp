@@ -57,17 +57,21 @@ for (int j = 0; j < k_; ++j) {
 return hashes;
 }
 
-//g(p) = (Σ r_j * h_j(p) mod M) mod TableSize
-int LSH::compute_bucket_id(const vector<long long>& hashes, int table_idx) const {
+//ID(p) = (Σ r_j * h_j(p)) mod M
+uint64_t LSH::compute_id(const vector<long long>& hashes, int table_idx) const {
     uint64_t acc = 0;
-    for (int j = 0; j < k_; j++) { //για κάθε hash function να μην σκάσει
+    for (int j = 0; j < k_; j++) {
         long long hval = hashes[j] % (long long)M_;
         if (hval < 0) hval += M_;
         acc = (acc + (uint64_t)r_[table_idx][j] * (uint64_t)hval) % M_;
     }
-    return (int)(acc % table_size_);
+    return acc; // αυτό είναι το ID(p)
 }
 
+//g(p) = ID(p) mod TableSize
+int LSH::compute_bucket_id(uint64_t id) const {
+    return (int)(id % table_size_);
+}
 
 //απλή ευκλείδεια απόσταση
 float LSH::euclidean_distance_sq(const vector<float>& x, const vector<float>& y) const {
@@ -85,15 +89,16 @@ void LSH::build_index(const vector<vector<float>>& data) {
     int n = data.size();
     table_size_ = max(1, n / 4);  //ή n/8, n/16 heuristic
 
-    tables_.assign(L_, vector<vector<int>>(table_size_));
+    tables_.assign(L_, vector<vector<pair<uint64_t,int>>>(table_size_));
 
     cout << "Building index on dataset of size " << n << endl;
     for (int id = 0; id < n; id++) {
         const auto& p = data[id];
         for (int i = 0; i < L_; i++) {
             auto hashes = compute_hashes_for_table(p, i);
-            int bucket = compute_bucket_id(hashes, i);
-            tables_[i][bucket].push_back(id);
+            uint64_t obj_id = compute_id(hashes, i);
+            int bucket = compute_bucket_id(obj_id);
+            tables_[i][bucket].push_back({obj_id, id});
         }
     }
 }
@@ -109,10 +114,14 @@ vector<int> LSH::query(const vector<float>& q, int num_neighbors) const {
 
     for (int i = 0; i < L_; ++i) {
         auto hashes = compute_hashes_for_table(q, i);
-        int bucket = compute_bucket_id(hashes, i);
+        uint64_t q_id = compute_id(hashes, i);
+        int bucket = compute_bucket_id(q_id);
 
-        for (int id : tables_[i][bucket]) {
-            candidates.insert(id);
+        //φιλτράρουμε μόνο όσους έχουν ίδιο ID
+        for (const auto& [obj_id, idx] : tables_[i][bucket]) {
+            if (obj_id == q_id) {
+                candidates.insert(idx);
+            }
         }
     }
 
