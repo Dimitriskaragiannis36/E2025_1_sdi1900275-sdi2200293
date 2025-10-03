@@ -2,8 +2,7 @@
 #define LSH_H
 
 #include <vector>
-#include <string>
-#include <unordered_map>
+#include <cstdint>
 using namespace std;
 
 namespace nn {
@@ -29,14 +28,20 @@ private:
     float w_;   //μέγεθος παραθύρου w
     unsigned int seed_;
 
-    //πίνακες hash: key -> λίστα IDs
-    vector<unordered_map<string, vector<int>>> tables_;
+    static constexpr uint64_t M_ = 4294967291ULL; //μεγάλο prime κοντά στο 2^32
+    int table_size_ = 1; //TableSize = n/4 ή n/8, ορίζεται στο build_index
+
+    //πίνακες hash: L × TableSize, κάθε bucket έχει λίστα IDs
+    vector<vector<vector<int>>> tables_;
 
     //τυχαία διανύσματα v ∼ N(0,1)^d (L × k × d) 
     vector<vector<vector<float>>> v_;
 
     //μετατοπίσεις t ∼ U[0,w) (L × k) 
     vector<vector<float>> t_;
+    
+    //random coefficients r (L × k)
+    vector<vector<uint32_t>> r_;
 
     //δείκτης στα δεδομένα
     const vector<vector<float>>* data_ptr_ = nullptr;
@@ -44,8 +49,10 @@ private:
     //h(p) = floor((p·v + t) / w) για κάθε hash function 
     vector<long long> compute_hashes_for_table(const vector<float>& p, int table_idx) const;
 
-    //βοηθητικές συναρτήσεις 
-    string signature_to_string(const vector<long long>& hashes) const; 
+    //g(p) = (Σ r_j * h_j(p) mod M) mod TableSize
+    int compute_bucket_id(const vector<long long>& hashes, int table_idx) const;
+
+    //ευκλείδεια απόσταση
     float euclidean_distance_sq(const vector<float>& x, const vector<float>& y) const;
 };
 
