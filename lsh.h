@@ -15,8 +15,17 @@ public:
     //χτίσιμο index πάνω σε dataset
     void build_index(const vector<vector<float>>& data);
 
-    //query: επιστροφή approximate nearest neighbors
+    //γενική query συνάρτηση που χρησιμοποιούν οι παρακάτω
     vector<int> query(const vector<float>& q, int num_neighbors = 10) const;
+
+    //(α) ένας πλησιέστερος γείτονας
+    int nn_query(const vector<float>& q, float epsilon = 0.1f) const;
+
+    //(β) N πλησιέστεροι γείτονες
+    vector<int> knn_query(const vector<float>& q, int N) const;
+
+    //(γ) αναζήτηση εντός ακτίνας R
+    vector<int> range_search(const vector<float>& q, float R) const;
 
     //εκκαθάριση index
     void clear_index();

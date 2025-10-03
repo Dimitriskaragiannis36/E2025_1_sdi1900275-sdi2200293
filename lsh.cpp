@@ -126,14 +126,23 @@ vector<int> LSH::query(const vector<float>& q, int num_neighbors) const {
     }
 
     vector<pair<float,int>> dists;
+    dists.reserve(candidates.size());
     for (int id : candidates) {
         float dist = euclidean_distance_sq(q, (*data_ptr_)[id]);
         dists.emplace_back(dist, id);
     }
 
-    sort(dists.begin(), dists.end());
+    //πιο αποδοτικό: nth_element + sort μόνο των πρώτων k
+    if ((int)dists.size() > num_neighbors) {
+        nth_element(dists.begin(), dists.begin() + num_neighbors, dists.end());
+        dists.resize(num_neighbors);
+        sort(dists.begin(), dists.end());
+    } else {
+        sort(dists.begin(), dists.end());
+    }
 
     vector<int> result;
+    result.reserve(min(num_neighbors, (int)dists.size()));
     for (int i = 0; i < num_neighbors && i < (int)dists.size(); ++i) {
         result.push_back(dists[i].second);
     }
@@ -148,5 +157,65 @@ void LSH::clear_index() {
     }
     cout << "Index cleared." << endl;
 }
+
+//(α) ένας πλησιέστερος γείτονας (ε-approximate NN)
+int LSH::nn_query(const vector<float>& q, float epsilon) const {
+    auto result = query(q, 1);  
+    if (result.empty()) return -1;
+
+    int candidate = result[0];
+    float best_dist = euclidean_distance_sq(q, (*data_ptr_)[candidate]);
+
+    //ψάχνουμε αν υπάρχει άλλος που να κάνει violate το (1+ε)
+    for (int i = 0; i < (int)data_ptr_->size(); i++) {
+        if (i == candidate) continue;
+        float dist = euclidean_distance_sq(q, (*data_ptr_)[i]);
+        if (dist < best_dist / (1 + epsilon)) {
+            // τότε ο chosen δεν είναι valid ϵ-NN → update
+            candidate = i;
+            best_dist = dist;
+        }
+    }
+
+    return candidate;
+}
+
+//(β) N πλησιέστεροι γείτονες
+vector<int> LSH::knn_query(const vector<float>& q, int N) const {
+    return query(q, N);
+}
+
+//(γ) αναζήτηση εντός ακτίνας R
+vector<int> LSH::range_search(const vector<float>& q, float R) const {
+    if (!data_ptr_) {
+        cerr << "Error: index not built!" << endl;
+        return {};
+    }
+
+    unordered_set<int> candidates;
+
+    for (int i = 0; i < L_; ++i) {
+        auto hashes = compute_hashes_for_table(q, i);
+        uint64_t q_id = compute_id(hashes, i);
+        int bucket = compute_bucket_id(q_id);
+
+        for (const auto& [obj_id, idx] : tables_[i][bucket]) {
+            if (obj_id == q_id) {
+                candidates.insert(idx);
+            }
+        }
+    }
+
+    vector<int> result;
+    for (int id : candidates) {
+        float dist = euclidean_distance_sq(q, (*data_ptr_)[id]);
+        if (dist <= R*R) { //συγκρίνουμε με το τετράγωνο για να μην κάνουμε sqrt
+            result.push_back(id);
+        }
+    }
+
+    return result;
+}
+
 
 } //namespace nn
