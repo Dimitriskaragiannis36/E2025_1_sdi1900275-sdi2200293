@@ -15,8 +15,8 @@ LSH::LSH(int dim, int L, int k, float w, unsigned int seed)
 
     //random generators 
     mt19937 rng(seed_); 
-    normal_distribution<float> normal_dist(0.0f, 1.0f); // N(0,1) 
-    uniform_real_distribution<float> uniform_dist(0.0f, w_); // U[0,w)
+    normal_distribution<float> normal_dist(0.0f, 1.0f); //N(0,1) 
+    uniform_real_distribution<float> uniform_dist(0.0f, w_); //U[0,w)
     
     //γέμισμα v_ and t_ 
     for (int i = 0; i < L_; ++i) { 
@@ -53,10 +53,38 @@ for (int j = 0; j < k_; ++j) {
 return hashes;
 }
 
+//μετατροπή υπογραφής σε string για χρήση ως κλειδί στον πίνακα κατακερματισμού
+string LSH::signature_to_string(const vector<long long>& hashes) const {
+    string sig;
+    for (size_t i = 0; i < hashes.size(); ++i) {
+        sig += to_string(hashes[i]);
+        if (i + 1 < hashes.size()) sig += "|";
+    }
+    return sig;
+}
+
+//απλή ευκλείδεια απόσταση
+float LSH::euclidean_distance_sq(const vector<float>& x, const vector<float>& y) const {
+    float dist = 0.0f;
+    for (int i = 0; i < dim_; ++i) {
+        float diff = x[i] - y[i];
+        dist += diff * diff;
+    }
+    return dist;
+}
+
 void LSH::build_index(const vector<vector<float>>& data) {
     data_ptr_ = &data;
-    //εκκρεμεί hash function and bucket γέμισμα
+    //hash function and bucket γέμισμα
     cout << "Building index on dataset of size " << data.size() << endl;
+     for (int id = 0; id < (int)data.size(); ++id) {
+        const auto& p = data[id];
+        for (int i = 0; i < L_; ++i) {
+            auto hashes = compute_hashes_for_table(p, i);
+            string key = signature_to_string(hashes);
+            tables_[i][key].push_back(id);
+        }
+    }
 }
 
 vector<int> LSH::query(const vector<float>& q, int num_neighbors) const {
