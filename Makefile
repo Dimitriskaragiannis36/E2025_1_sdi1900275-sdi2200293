@@ -1,19 +1,24 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -O2
+CXXFLAGS = -std=c++17 -Wall -O2 -Iinclude
 
-TARGET = lsh_test
-OBJS = main.o lsh.o
+TARGET = bin/lsh_test
+SRCS = $(wildcard src/*.cpp)
+OBJS = $(patsubst src/%.cpp, build/%.o, $(SRCS))
+
+.PHONY: all clean run
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
+	@mkdir -p bin
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-main.o: main.cpp lsh.h
-	$(CXX) $(CXXFLAGS) -c main.cpp
+build/%.o: src/%.cpp
+	@mkdir -p build
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-lsh.o: lsh.cpp lsh.h
-	$(CXX) $(CXXFLAGS) -c lsh.cpp
+run: $(TARGET)
+	./$(TARGET)
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -rf build bin
