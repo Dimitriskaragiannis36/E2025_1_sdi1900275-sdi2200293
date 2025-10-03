@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+using namespace std;
 
 namespace nn {
 
@@ -13,10 +14,10 @@ public:
     LSH(int dim, int L = 5, int k = 4, float w = 4.0f, unsigned int seed = 12345);
 
     //χτίσιμο index πάνω σε dataset
-    void build_index(const std::vector<std::vector<float>>& data);
+    void build_index(const vector<vector<float>>& data);
 
     //query: επιστροφή approximate nearest neighbors
-    std::vector<int> query(const std::vector<float>& q, int num_neighbors = 10) const;
+    vector<int> query(const vector<float>& q, int num_neighbors = 10) const;
 
     //εκκαθάριση index
     void clear_index();
@@ -29,10 +30,10 @@ private:
     unsigned int seed_;
 
     //πίνακες hash: key -> λίστα IDs
-    std::vector<std::unordered_map<std::string, std::vector<int>>> tables_;
+    vector<unordered_map<string, vector<int>>> tables_;
 
     //δείκτης στα δεδομένα
-    const std::vector<std::vector<float>>* data_ptr_ = nullptr;
+    const vector<vector<float>>* data_ptr_ = nullptr;
 };
 
 } //namespace nn
