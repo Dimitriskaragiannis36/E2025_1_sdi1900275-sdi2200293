@@ -24,16 +24,29 @@ public:
 
 private:
     int dim_;   //διάσταση
-    int L_;     //αριθμός hash tables
-    int k_;     //αριθμός hash functions ανά πίνακα
-    float w_;   //μέγεθος παραθύρου
+    int L_;     //αριθμός hash tables L
+    int k_;     //αριθμός hash functions ανά πίνακα k
+    float w_;   //μέγεθος παραθύρου w
     unsigned int seed_;
 
     //πίνακες hash: key -> λίστα IDs
     vector<unordered_map<string, vector<int>>> tables_;
 
+    //τυχαία διανύσματα v ∼ N(0,1)^d (L × k × d) 
+    vector<vector<vector<float>>> v_;
+
+    //μετατοπίσεις t ∼ U[0,w) (L × k) 
+    vector<vector<float>> t_;
+
     //δείκτης στα δεδομένα
     const vector<vector<float>>* data_ptr_ = nullptr;
+
+    //h(p) = floor((p·v + t) / w) για κάθε hash function 
+    vector<long long> compute_hashes_for_table(const vector<float>& p, int table_idx) const;
+
+    //βοηθητικές συναρτήσεις 
+    string signature_to_string(const vector<long long>& hashes) const; 
+    float euclidean_distance_sq(const vector<float>& x, const vector<float>& y) const;
 };
 
 } //namespace nn
