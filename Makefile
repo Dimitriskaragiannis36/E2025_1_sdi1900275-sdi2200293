@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -O2 -Iinclude
 
-TARGET = bin/lsh_test
+TARGET = bin/search
 SRCS = $(wildcard src/*.cpp)
 OBJS = $(patsubst src/%.cpp, build/%.o, $(SRCS))
 
