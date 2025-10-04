@@ -181,8 +181,53 @@ int LSH::nn_query(const vector<float>& q, float epsilon) const {
 }
 
 //(β) N πλησιέστεροι γείτονες
-vector<int> LSH::knn_query(const vector<float>& q, int N) const {
-    return query(q, N);
+vector<pair<int, float>> LSH::knn_query(const vector<float>& q, int N) const {
+    if (!data_ptr_) {
+        cerr << "Error: index not built!" << endl;
+        return {};
+    }
+
+    unordered_set<int> candidates;
+
+    // Συλλέγουμε υποψηφίους από όλους τους πίνακες hash
+    for (int i = 0; i < L_; ++i) {
+        auto hashes = compute_hashes_for_table(q, i);
+        uint64_t q_id = compute_id(hashes, i);
+        int bucket = compute_bucket_id(q_id);
+
+        for (const auto& [obj_id, idx] : tables_[i][bucket]) {
+            if (obj_id == q_id) {
+                candidates.insert(idx);
+            }
+        }
+    }
+
+    //υπολογίζουμε αποστάσεις μόνο για τους υποψήφιους
+    vector<pair<float,int>> dists;
+    dists.reserve(candidates.size());
+    for (int id : candidates) {
+        float dist = euclidean_distance_sq(q, (*data_ptr_)[id]);
+        dists.emplace_back(dist, id);
+    }
+
+    if (dists.empty()) return {};
+
+    //nth_element για top-N
+    if ((int)dists.size() > N) {
+        nth_element(dists.begin(), dists.begin() + N, dists.end());
+        dists.resize(N);
+        sort(dists.begin(), dists.end());
+    } else {
+        sort(dists.begin(), dists.end());
+    }
+
+    //eπιστρέφουμε (index, απόσταση)
+    vector<pair<int,float>> result;
+    result.reserve(dists.size());
+    for (auto& [dist, id] : dists)
+        result.emplace_back(id, sqrt(dist));  // επιστρέφουμε sqrt για κανονική απόσταση
+
+    return result;
 }
 
 //(γ) αναζήτηση εντός ακτίνας R
