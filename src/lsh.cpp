@@ -189,7 +189,7 @@ vector<pair<int, float>> LSH::knn_query(const vector<float>& q, int N) const {
 
     unordered_set<int> candidates;
 
-    // Συλλέγουμε υποψηφίους από όλους τους πίνακες hash
+    //συλλέγουμε υποψηφίους από όλους τους πίνακες hash
     for (int i = 0; i < L_; ++i) {
         auto hashes = compute_hashes_for_table(q, i);
         uint64_t q_id = compute_id(hashes, i);
@@ -221,7 +221,7 @@ vector<pair<int, float>> LSH::knn_query(const vector<float>& q, int N) const {
         sort(dists.begin(), dists.end());
     }
 
-    //eπιστρέφουμε (index, απόσταση)
+    //επιστρέφουμε (index, απόσταση)
     vector<pair<int,float>> result;
     result.reserve(dists.size());
     for (auto& [dist, id] : dists)

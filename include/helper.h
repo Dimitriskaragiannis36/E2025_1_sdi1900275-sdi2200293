@@ -21,6 +21,7 @@ struct Params {
     std::string output_file = "results.txt";
     std::string type = "mnist";
     bool do_range = true;
+    bool use_lsh = false;
 };
 
 //συνάρτηση για την ανάλυση των παραμέτρων από τη γραμμή εντολών

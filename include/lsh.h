@@ -22,7 +22,7 @@ public:
     int nn_query(const vector<float>& q, float epsilon = 0.1f) const;
 
     //(β) N πλησιέστεροι γείτονες
-    vector<int> knn_query(const vector<float>& q, int N) const;
+    vector<pair<int, float>> knn_query(const vector<float>& q, int N) const;
 
     //(γ) αναζήτηση εντός ακτίνας R
     vector<int> range_search(const vector<float>& q, float R) const;
