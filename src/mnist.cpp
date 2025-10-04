@@ -34,7 +34,7 @@ vector<vector<float>> load_mnist_images(const string &filename, int max_images) 
          << num_rows << "x" << num_cols << endl;
 
     int dim = num_rows * num_cols;
-    int count = (max_images > 0 && max_images < (int)num_images) ? max_images : num_images;
+    int count = (max_images < 0 || max_images > (int)num_images) ? num_images : max_images;
 
     vector<vector<float>> images(count, vector<float>(dim));
 

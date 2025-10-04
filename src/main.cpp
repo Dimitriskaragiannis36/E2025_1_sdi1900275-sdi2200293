@@ -4,9 +4,13 @@
 using namespace std;
 
 int main() {
-    //φόρτωσε MNIST (π.χ. τις πρώτες 2000 εικόνες για ταχύτητα)
-    string filename = "data/train-images.idx3-ubyte";
-    auto data = load_mnist_images(filename, 2000);
+    //φόρτωσε MNIST input.dat
+    string filename = "data/input.dat";
+    auto data = load_mnist_images(filename, -1);
+
+    //φόρτωσε MNIST query.dat
+    string query_file = "data/query.dat";
+    auto queries = load_mnist_images(query_file, -1);
 
     //φτιάχνουμε LSH αντικείμενο: dim=784 (28x28), L=5 πίνακες, k=4 hash functions, w=4.0
     nn::LSH lsh(784, 5, 4, 4.0f);
