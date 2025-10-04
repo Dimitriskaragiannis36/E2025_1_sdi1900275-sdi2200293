@@ -4,6 +4,11 @@
 #include <fstream>
 #include <string>
 #include <cstdlib>
+#include <chrono>
+#include <cmath>
+#include <limits>
+#include <algorithm>
+
 using namespace std;
 
 int main(int argc, char* argv[]) {
@@ -75,23 +80,84 @@ int main(int argc, char* argv[]) {
     }
 
     //τρέξε queries
+    auto t0_total = chrono::high_resolution_clock::now();
+    double sum_AF = 0.0;
+    int recall_count = 0;
+    double sum_tApprox = 0.0;
+    double sum_tTrue = 0.0;
+
     for (size_t qi = 0; qi < queries.size(); ++qi) {
-        out << "Query " << qi << ":\n";
+        out << "LSH\n";
+        out << "Query: " << qi << "\n";
 
-        int nn_idx = lsh.nn_query(queries[qi]);
-        out << "  Nearest Neighbor: " << nn_idx << "\n";
-
+        //approximate kNN query
+        auto t0 = chrono::high_resolution_clock::now();
         auto knn = lsh.knn_query(queries[qi], N);
-        out << "  " << N << "-Nearest Neighbors:";
-        for (int idx : knn) out << " " << idx;
-        out << "\n";
+        auto t1 = chrono::high_resolution_clock::now();
+        double tApprox_ms = chrono::duration<double, std::milli>(t1 - t0).count();
+        sum_tApprox += tApprox_ms;
 
+        //αποστάσεις approximate
+        vector<double> approx_dists(N, 0.0);
+        for (int i = 0; i < (int)knn.size(); ++i) {
+            double dist = 0.0;
+            for (size_t d = 0; d < queries[qi].size(); ++d)
+                dist += (queries[qi][d] - data[knn[i]][d]) * (queries[qi][d] - data[knn[i]][d]);
+            approx_dists[i] = sqrt(dist);
+            out << "Nearest neighbor-" << (i+1) << ": " << knn[i] << "\n";
+            out << "distanceApproximate: " << approx_dists[i] << "\n";
+        }
+
+        //ακριβές NN distance
+        auto t0_true = chrono::high_resolution_clock::now();
+        double best_dist = std::numeric_limits<double>::max();
+        int true_nn = -1;
+        for (size_t i = 0; i < data.size(); ++i) {
+            double dist = 0.0;
+            for (size_t d = 0; d < queries[qi].size(); ++d)
+                dist += (queries[qi][d] - data[i][d]) * (queries[qi][d] - data[i][d]);
+            dist = sqrt(dist);
+            if (dist < best_dist) {
+                best_dist = dist;
+                true_nn = i;
+            }
+        }
+        auto t1_true = chrono::high_resolution_clock::now();
+        double tTrue_ms = chrono::duration<double, std::milli>(t1_true - t0_true).count();
+        sum_tTrue += tTrue_ms;
+
+        //εκτύπωση true distances
+        for (int i = 0; i < (int)knn.size(); ++i) {
+            out << "distanceTrue: " << best_dist << "\n";
+        }
+
+        //υπολογισμός AF και Recall@N
+        sum_AF += approx_dists[0] / best_dist;  // πρώτος NN
+        if (std::find(knn.begin(), knn.end(), true_nn) != knn.end()) recall_count++;
+
+        //range search
         if (do_range) {
             auto range = lsh.range_search(queries[qi], R);
-            out << "  Range (R=" << R << "): " << range.size() << " neighbors\n";
+            out << "R-near neighbors:\n";
+            for (int idx : range) out << idx << "\n";
         }
         out << "\n";
     }
+
+    //μέσοι όροι και QPS
+    auto t1_total = chrono::high_resolution_clock::now();
+    double total_time_sec = chrono::duration<double>(t1_total - t0_total).count();
+    double QPS = queries.size() / total_time_sec;
+    double avg_AF = sum_AF / queries.size();
+    double recall_at_N = (double)recall_count / queries.size();
+    double tApproxAvg = sum_tApprox / queries.size();
+    double tTrueAvg = sum_tTrue / queries.size();
+
+    out << "Average AF: " << avg_AF << "\n";
+    out << "Recall@N: " << recall_at_N << "\n";
+    out << "QPS: " << QPS << "\n";
+    out << "tApproximateAverage: " << tApproxAvg << " ms\n";
+    out << "tTrueAverage: " << tTrueAvg << " ms\n";
 
     out.close();
     lsh.clear_index();
