@@ -105,12 +105,19 @@ namespace utils {
                 approx_dists.push_back(dist);
                 double trueDist = -1.0;
                 auto it = find(true_ids.begin(), true_ids.end(), idx);
-                if (it != true_ids.end())
+                if (it != true_ids.end()) {
+                    //είναι στους top-N → πάρε την προϋπολογισμένη απόσταση
                     trueDist = true_dists[it - true_ids.begin()];
-
+                } else {
+                    //δεν είναι στους top-N → υπολόγισε απόσταση on the fly
+                    double dsum = 0.0;
+                    for (size_t d = 0; d < queries[qi].size(); ++d)
+                        dsum += (queries[qi][d] - data[idx][d]) * (queries[qi][d] - data[idx][d]);
+                    trueDist = sqrt(dsum);
+                }
                 out << "Nearest neighbor-" << nn_counter++ << ": " << idx << "\n";
                 out << "distanceApproximate: " << dist << "\n";
-                out << "distanceTrue: " << (trueDist >= 0 ? to_string(trueDist) : "N/A") << "\n";
+                out << "distanceTrue: " << trueDist << "\n";
             }
 
             // metrics
