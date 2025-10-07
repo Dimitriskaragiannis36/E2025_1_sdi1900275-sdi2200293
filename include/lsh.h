@@ -3,14 +3,18 @@
 
 #include <vector>
 #include <cstdint>
+#include <functional>
 using namespace std;
 
 namespace nn {
 
+using DistanceFunc = std::function<float(const std::vector<float>&, const std::vector<float>&)>;
+
 class LSH {
 public:
     //κονστράκτορας με βασικές παραμέτρους
-    LSH(int dim, int L = 5, int k = 4, float w = 4.0f, unsigned int seed = 12345);
+    LSH(int dim, int L = 5, int k = 4, int w = 4, unsigned int seed = 12345,
+    DistanceFunc dist_func = nullptr);
 
     //χτίσιμο index πάνω σε dataset
     void build_index(const vector<vector<float>>& data);
@@ -34,10 +38,11 @@ private:
     int dim_;   //διάσταση
     int L_;     //αριθμός hash tables L
     int k_;     //αριθμός hash functions ανά πίνακα k
-    float w_;   //μέγεθος παραθύρου w
+    int w_;   //μέγεθος παραθύρου w
     unsigned int seed_;
 
-    static constexpr uint64_t M_ = 4294967291ULL; //μεγάλο prime κοντά στο 2^32
+    static constexpr uint64_t M_ = 4294967291ULL; //μεγάλο prime κοντά στο 2^32 
+    //για ↑ συγκρούσεις ↑ w ή ↓ k ενώ ↓ συγκρούσεις ↓ w ή ↑ k
     int table_size_ = 1; //TableSize = n/4 ή n/8, ορίζεται στο build_index
 
     //κάθε bucket: λίστα (ID, index)
@@ -55,6 +60,9 @@ private:
     //δείκτης στα δεδομένα
     const vector<vector<float>>* data_ptr_ = nullptr;
 
+    //συνάρτηση απόστασης (default: ευκλείδεια)
+    DistanceFunc distance_func_;
+
     //h(p) = floor((p·v + t) / w) για κάθε hash function 
     vector<long long> compute_hashes_for_table(const vector<float>& p, int table_idx) const;
 
@@ -65,7 +73,7 @@ private:
     int compute_bucket_id(uint64_t id) const;
 
     //ευκλείδεια απόσταση
-    float euclidean_distance_sq(const vector<float>& x, const vector<float>& y) const;
+    float euclidean_distance(const vector<float>& x, const vector<float>& y) const;
 };
 
 } //namespace nn

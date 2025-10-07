@@ -20,7 +20,7 @@ namespace utils {
             else if (arg == "-o" && i+1 < argc) p.output_file = argv[++i];
             else if (arg == "-k" && i+1 < argc) p.k = atoi(argv[++i]);
             else if (arg == "-L" && i+1 < argc) p.L = atoi(argv[++i]);
-            else if (arg == "-w" && i+1 < argc) p.w = atof(argv[++i]);
+            else if (arg == "-w" && i+1 < argc) p.w = atoi(argv[++i]);
             else if (arg == "-N" && i+1 < argc) p.N = atoi(argv[++i]);
             else if (arg == "-R" && i+1 < argc) p.R = atof(argv[++i]);
             else if (arg == "-type" && i+1 < argc) p.type = argv[++i];

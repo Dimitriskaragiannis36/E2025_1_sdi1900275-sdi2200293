@@ -8,8 +8,8 @@ using namespace std;
 
 namespace nn {
 
-LSH::LSH(int dim, int L, int k, float w, unsigned int seed)
-    : dim_(dim), L_(L), k_(k), w_(w), seed_(seed) {
+LSH::LSH(int dim, int L, int k, int w, unsigned int seed, DistanceFunc dist_func)
+    : dim_(dim), L_(L), k_(k), w_(w), seed_(seed), distance_func_(std::move(dist_func)) {
     tables_.resize(L_); //πιθανόν περιττό
     v_.assign(L_, vector<vector<float>>(k_, vector<float>(dim_, 0.0f)));
     t_.assign(L_, vector<float>(k_, 0.0f));
@@ -18,7 +18,7 @@ LSH::LSH(int dim, int L, int k, float w, unsigned int seed)
     //random generators 
     mt19937 rng(seed_); 
     normal_distribution<float> normal_dist(0.0f, 1.0f); //N(0,1) 
-    uniform_real_distribution<float> uniform_dist(0.0f, w_); //U[0,w)
+    uniform_real_distribution<float> uniform_dist(0.0f, (float)w_); //U[0,w)
     uniform_int_distribution<uint32_t> int_dist(1, M_-1); //για r_j
     
     //γέμισμα v_ t_ και r_ 
@@ -37,6 +37,14 @@ LSH::LSH(int dim, int L, int k, float w, unsigned int seed)
               << ", k=" << k_
               << ", w=" << w_
               << endl;
+
+    if (!distance_func_) {
+        //αν δεν δόθηκε custom μετρική, χρησιμοποίησε την default ευκλείδεια
+        distance_func_ = [this](const vector<float>& a, const vector<float>& b) {
+            return euclidean_distance(a, b);
+        };
+    }
+
 }
 
 //h(p) = floor((p·v + t) / w) για κάθε hash function
@@ -74,13 +82,13 @@ int LSH::compute_bucket_id(uint64_t id) const {
 }
 
 //απλή ευκλείδεια απόσταση
-float LSH::euclidean_distance_sq(const vector<float>& x, const vector<float>& y) const {
+float LSH::euclidean_distance(const vector<float>& x, const vector<float>& y) const {
     float dist = 0.0f;
     for (int i = 0; i < dim_; ++i) {
         float diff = x[i] - y[i];
         dist += diff * diff;
     }
-    return dist;
+    return sqrt(dist);
 }
 
 //χτίσιμο index
@@ -128,7 +136,7 @@ vector<int> LSH::query(const vector<float>& q, int num_neighbors) const {
     vector<pair<float,int>> dists;
     dists.reserve(candidates.size());
     for (int id : candidates) {
-        float dist = euclidean_distance_sq(q, (*data_ptr_)[id]);
+        float dist = distance_func_(q, (*data_ptr_)[id]);
         dists.emplace_back(dist, id);
     }
 
@@ -164,12 +172,12 @@ int LSH::nn_query(const vector<float>& q, float epsilon) const {
     if (result.empty()) return -1;
 
     int candidate = result[0];
-    float best_dist = euclidean_distance_sq(q, (*data_ptr_)[candidate]);
+    float best_dist = distance_func_(q, (*data_ptr_)[candidate]);
 
     //ψάχνουμε αν υπάρχει άλλος που να κάνει violate το (1+ε)
     for (int i = 0; i < (int)data_ptr_->size(); i++) {
         if (i == candidate) continue;
-        float dist = euclidean_distance_sq(q, (*data_ptr_)[i]);
+        float dist = distance_func_(q, (*data_ptr_)[i]);
         if (dist < best_dist / (1 + epsilon)) {
             // τότε ο chosen δεν είναι valid ϵ-NN → update
             candidate = i;
@@ -206,7 +214,7 @@ vector<pair<int, float>> LSH::knn_query(const vector<float>& q, int N) const {
     vector<pair<float,int>> dists;
     dists.reserve(candidates.size());
     for (int id : candidates) {
-        float dist = euclidean_distance_sq(q, (*data_ptr_)[id]);
+        float dist = distance_func_(q, (*data_ptr_)[id]);
         dists.emplace_back(dist, id);
     }
 
@@ -225,8 +233,7 @@ vector<pair<int, float>> LSH::knn_query(const vector<float>& q, int N) const {
     vector<pair<int,float>> result;
     result.reserve(dists.size());
     for (auto& [dist, id] : dists)
-        result.emplace_back(id, sqrt(dist));  // επιστρέφουμε sqrt για κανονική απόσταση
-
+        result.emplace_back(id, dist); //δεν χρειάζεται sqrt ξανά
     return result;
 }
 
@@ -253,13 +260,13 @@ vector<int> LSH::range_search(const vector<float>& q, float R) const {
 
     vector<int> result;
     for (int id : candidates) {
-        float dist = euclidean_distance_sq(q, (*data_ptr_)[id]);
-        if (dist <= R*R) { //συγκρίνουμε με το τετράγωνο για να μην κάνουμε sqrt
+        float dist = distance_func_(q, (*data_ptr_)[id]);
+        if (dist <= R) {
             result.push_back(id);
         }
     }
-
     return result;
+
 }
 
 

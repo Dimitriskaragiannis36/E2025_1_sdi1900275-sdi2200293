@@ -13,7 +13,7 @@ struct Params {
     int seed = 1;
     int k = 4;
     int L = 5;
-    float w = 4.0f;
+    int w = 4;
     int N = 1;
     float R = 2000.0f;
     std::string input_file = "data/input.dat";
