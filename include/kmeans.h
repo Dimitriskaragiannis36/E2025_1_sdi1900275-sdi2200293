@@ -56,9 +56,13 @@ private:
     std::vector<int> labels_; // n
 
 
-    //βοηθητικές μέθοδοι
+    //τετραγωνική απόσταση μεταξύ δύο σημείων
     float squared_distance(const std::vector<float>& a, const std::vector<float>& b) const;
+    
+    //τυχαίας αρχικοποίησης
     void init_random(const std::vector<std::vector<float>>& data, std::mt19937& rng);
+    
+    //k-means++
     void init_kmeans_pp(const std::vector<std::vector<float>>& data, std::mt19937& rng);
 };
 

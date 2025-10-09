@@ -54,7 +54,61 @@ void KMeans::init_random(const std::vector<std::vector<float>>& data,
     }
 }
 
-//k-means++ αρχικοποίηση των κεντροειδών
+//πιο εξελιγμένη αρχικοποίηση k-means++
+void KMeans::init_kmeans_pp(const std::vector<std::vector<float>>& data,
+                            std::mt19937& rng) {
+    size_t n = data.size();
+    size_t d = data[0].size();
+
+    std::uniform_int_distribution<size_t> uni_dist(0, n - 1);
+    centroids_.clear();
+    centroids_.push_back(data[uni_dist(rng)]); //πρώτο κέντρο τυχαία
+
+    std::vector<float> dist_sq(n, std::numeric_limits<float>::max());
+
+    //επαναλαμβάνουμε μέχρι να έχουμε k κέντρα
+    for (int c = 1; c < k_; ++c) {
+        //ενημέρωση των αποστάσεων από το κοντινότερο υπάρχον κέντρο
+        for (size_t i = 0; i < n; ++i) {
+            float d2 = squared_distance(data[i], centroids_.back());
+            if (d2 < dist_sq[i])
+                dist_sq[i] = d2;
+        }
+
+        //επιλογή νέου κέντρου με πιθανότητα D(x)^2
+        float sum = 0.0f;
+        for (float val : dist_sq)
+            sum += val;
+
+        if (sum == 0.0f) {
+            //όλα τα σημεία ταυτίζονται — διάλεξε τυχαία
+            centroids_.push_back(data[uni_dist(rng)]);
+            continue;
+        }
+
+        std::uniform_real_distribution<float> prob_dist(0.0f, sum);
+        float r = prob_dist(rng);
+
+        float accum = 0.0f;
+        size_t next_idx = 0;
+        for (size_t i = 0; i < n; ++i) {
+            accum += dist_sq[i];
+            if (accum >= r) {
+                next_idx = i;
+                break;
+            }
+        }
+
+        centroids_.push_back(data[next_idx]);
+    }
+
+    if (verbose_) {
+        std::cout << "Initialized " << k_ << " centroids using K-Means++." << std::endl;
+    }
+}
+
+
+//k-means αρχικοποίηση των κεντροειδών
 int KMeans::fit(const std::vector<std::vector<float>>& data) {
     if (data.empty()) return 0;
     size_t n = data.size();
