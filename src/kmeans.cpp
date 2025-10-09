@@ -86,20 +86,32 @@ void KMeans::init_kmeans_pp(const std::vector<std::vector<float>>& data,
             continue;
         }
 
-        std::uniform_real_distribution<float> prob_dist(0.0f, sum);
-        float r = prob_dist(rng);
-
-        float accum = 0.0f;
-        size_t next_idx = 0;
-        for (size_t i = 0; i < n; ++i) {
-            accum += dist_sq[i];
-            if (accum >= r) {
-                next_idx = i;
-                break;
-            }
+        //κανονικοποίηση
+        float max_d = *std::max_element(dist_sq.begin(), dist_sq.end());
+        if (max_d > 0.0f) {
+            for (auto& val : dist_sq)
+                val /= max_d;
         }
 
+        //υπολογισμός prefix sums P
+        std::vector<float> prefix(n);
+        prefix[0] = dist_sq[0];
+        for (size_t i = 1; i < n; ++i)
+            prefix[i] = prefix[i - 1] + dist_sq[i];
+
+        //τυχαίος αριθμός στο [0, P(n−t)]
+        std::uniform_real_distribution<float> prob_dist(0.0f, prefix.back());
+        float r = prob_dist(rng);
+
+        //για να αποφύγω πιθανό out-of-range σε rare cases
+        r = std::min(r, prefix.back());
+
+        //binary search για να βρούμε r τέτοιο ώστε P(r−1) < x ≤ P(r)
+        auto it = std::lower_bound(prefix.begin(), prefix.end(), r);
+        size_t next_idx = std::distance(prefix.begin(), it);
+
         centroids_.push_back(data[next_idx]);
+
     }
 
     if (verbose_) {
@@ -194,6 +206,28 @@ int KMeans::fit(const std::vector<std::vector<float>>& data) {
 
     return iter + 1;
 }
+
+//πρόβλεψη της ομάδας για ένα νέο σημείο
+int KMeans::predict(const std::vector<float>& point) const {
+    if (centroids_.empty()) {
+        std::cerr << "Error: KMeans model not fitted yet!" << std::endl;
+        return -1;
+    }
+
+    float best_dist = std::numeric_limits<float>::max();
+    int best_cluster = -1;
+
+    for (int c = 0; c < k_; ++c) {
+        float dist = squared_distance(point, centroids_[c]);
+        if (dist < best_dist) {
+            best_dist = dist;
+            best_cluster = c;
+        }
+    }
+
+    return best_cluster;
+}
+
 
 
 } //namespace clustering
