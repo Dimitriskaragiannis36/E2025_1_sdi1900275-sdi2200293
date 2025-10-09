@@ -1,10 +1,12 @@
 #include "helper.h"
+#include "lsh.h"
 #include <iostream>
 #include <chrono>
 #include <cmath>
 #include <algorithm>
 #include <unordered_set>
 #include <iomanip>
+#include <vector>
 
 using namespace std;
 
@@ -149,6 +151,16 @@ namespace utils {
         out << "QPS: " << QPS << "\n";
         out << "tApproximateAverage: " << (sum_tApprox / queries.size()) << " ms\n";
         out << "tTrueAverage: " << (sum_tTrue / queries.size()) << " ms\n";
+    }
+
+    //απλή ευκλείδεια απόσταση
+    float euclidean_distance(const vector<float>& x, const vector<float>& y) {
+        float dist = 0.0f;
+        for (size_t i = 0; i < x.size(); ++i) {
+            float diff = x[i] - y[i];
+            dist += diff * diff;
+        }
+        return sqrt(dist);
     }
 
 } //namespace utils

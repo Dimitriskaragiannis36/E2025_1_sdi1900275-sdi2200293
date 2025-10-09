@@ -5,18 +5,21 @@
 #include <algorithm>
 #include <unordered_set>
 
+using namespace std;
+
 namespace clustering {
 
 //κατασκευαστής της κλάσης KMeans
 KMeans::KMeans(int k, int max_iters, float tol,
-               InitMethod init, unsigned int seed, bool verbose)
+               InitMethod init, unsigned int seed, bool verbose,
+               utils::DistanceFunc dist_func)
     : k_(k),
       max_iters_(max_iters),
       tol_(tol),
       init_method_(init),
       seed_(seed),
-      verbose_(verbose) {}
-
+      verbose_(verbose),
+      dist_func_(::move(dist_func)) {}
 
 void KMeans::clear() {
     centroids_.clear();
@@ -24,8 +27,8 @@ void KMeans::clear() {
 }
 
 //υλοποίηση του αλγορίθμου k-means
-float KMeans::squared_distance(const std::vector<float>& a,
-                               const std::vector<float>& b) const {
+float KMeans::squared_distance(const vector<float>& a,
+                               const vector<float>& b) const {
     float dist = 0.0f;
     for (size_t i = 0; i < a.size(); ++i) {
         float diff = a[i] - b[i];
@@ -36,10 +39,10 @@ float KMeans::squared_distance(const std::vector<float>& a,
 
 
 //τυχαία αρχικοποίηση των κεντροειδών από τα δεδομένα
-void KMeans::init_random(const std::vector<std::vector<float>>& data,
-                         std::mt19937& rng) {
-    std::uniform_int_distribution<size_t> dist(0, data.size() - 1);
-    std::unordered_set<size_t> chosen;
+void KMeans::init_random(const vector<vector<float>>& data,
+                         mt19937& rng) {
+    uniform_int_distribution<size_t> dist(0, data.size() - 1);
+    unordered_set<size_t> chosen;
 
     centroids_.clear();
     while (centroids_.size() < static_cast<size_t>(k_)) {
@@ -50,21 +53,21 @@ void KMeans::init_random(const std::vector<std::vector<float>>& data,
     }
 
     if (verbose_) {
-        std::cout << "Initialized " << k_ << " centroids randomly." << std::endl;
+        cout << "Initialized " << k_ << " centroids randomly." << endl;
     }
 }
 
 //πιο εξελιγμένη αρχικοποίηση k-means++
-void KMeans::init_kmeans_pp(const std::vector<std::vector<float>>& data,
-                            std::mt19937& rng) {
+void KMeans::init_kmeans_pp(const vector<vector<float>>& data,
+                            mt19937& rng) {
     size_t n = data.size();
-    size_t d = data[0].size();
+    //size_t d = data[0].size();
 
-    std::uniform_int_distribution<size_t> uni_dist(0, n - 1);
+    uniform_int_distribution<size_t> uni_dist(0, n - 1);
     centroids_.clear();
     centroids_.push_back(data[uni_dist(rng)]); //πρώτο κέντρο τυχαία
 
-    std::vector<float> dist_sq(n, std::numeric_limits<float>::max());
+    vector<float> dist_sq(n, numeric_limits<float>::max());
 
     //επαναλαμβάνουμε μέχρι να έχουμε k κέντρα
     for (int c = 1; c < k_; ++c) {
@@ -87,45 +90,45 @@ void KMeans::init_kmeans_pp(const std::vector<std::vector<float>>& data,
         }
 
         //κανονικοποίηση
-        float max_d = *std::max_element(dist_sq.begin(), dist_sq.end());
+        float max_d = *max_element(dist_sq.begin(), dist_sq.end());
         if (max_d > 0.0f) {
             for (auto& val : dist_sq)
                 val /= max_d;
         }
 
         //υπολογισμός prefix sums P
-        std::vector<float> prefix(n);
+        vector<float> prefix(n);
         prefix[0] = dist_sq[0];
         for (size_t i = 1; i < n; ++i)
             prefix[i] = prefix[i - 1] + dist_sq[i];
 
         //τυχαίος αριθμός στο [0, P(n−t)]
-        std::uniform_real_distribution<float> prob_dist(0.0f, prefix.back());
+        uniform_real_distribution<float> prob_dist(0.0f, prefix.back());
         float r = prob_dist(rng);
 
         //για να αποφύγω πιθανό out-of-range σε rare cases
-        r = std::min(r, prefix.back());
+        r = min(r, prefix.back());
 
         //binary search για να βρούμε r τέτοιο ώστε P(r−1) < x ≤ P(r)
-        auto it = std::lower_bound(prefix.begin(), prefix.end(), r);
-        size_t next_idx = std::distance(prefix.begin(), it);
+        auto it = lower_bound(prefix.begin(), prefix.end(), r);
+        size_t next_idx = distance(prefix.begin(), it);
 
         centroids_.push_back(data[next_idx]);
 
     }
 
     if (verbose_) {
-        std::cout << "Initialized " << k_ << " centroids using K-Means++." << std::endl;
+        cout << "Initialized " << k_ << " centroids using K-Means++." << endl;
     }
 }
 
 
 //k-means αρχικοποίηση των κεντροειδών
-int KMeans::fit(const std::vector<std::vector<float>>& data) {
+int KMeans::fit(const vector<vector<float>>& data) {
     if (data.empty()) return 0;
     size_t n = data.size();
     size_t d = data[0].size();
-    std::mt19937 rng(seed_);
+    mt19937 rng(seed_);
 
     //αρχικοποίηση κέντρων
     if (init_method_ == InitMethod::RANDOM)
@@ -134,8 +137,8 @@ int KMeans::fit(const std::vector<std::vector<float>>& data) {
         init_kmeans_pp(data, rng);
 
     labels_.assign(n, -1);
-    std::vector<std::vector<float>> new_centroids(k_, std::vector<float>(d, 0.0f));
-    std::vector<int> counts(k_, 0);
+    vector<vector<float>> new_centroids(k_, vector<float>(d, 0.0f));
+    vector<int> counts(k_, 0);
 
     int iter = 0;
     for (; iter < max_iters_; ++iter) {
@@ -143,11 +146,11 @@ int KMeans::fit(const std::vector<std::vector<float>>& data) {
 
         //βήμα ανάθεσης
         for (size_t i = 0; i < n; ++i) {
-            float best_dist = std::numeric_limits<float>::max();
+            float best_dist = numeric_limits<float>::max();
             int best_cluster = -1;
 
             for (int c = 0; c < k_; ++c) {
-                float dist = squared_distance(data[i], centroids_[c]);
+                float dist = dist_func_(data[i], centroids_[c]);
                 if (dist < best_dist) {
                     best_dist = dist;
                     best_cluster = c;
@@ -162,7 +165,7 @@ int KMeans::fit(const std::vector<std::vector<float>>& data) {
 
         //βήμα ενημέρωσης
         for (int c = 0; c < k_; ++c) {
-            std::fill(new_centroids[c].begin(), new_centroids[c].end(), 0.0f);
+            fill(new_centroids[c].begin(), new_centroids[c].end(), 0.0f);
             counts[c] = 0;
         }
 
@@ -179,7 +182,7 @@ int KMeans::fit(const std::vector<std::vector<float>>& data) {
                     new_centroids[c][j] /= counts[c];
             } else {
                 //αν κάποια ομάδα άδειασε, επανατοποθέτησε τυχαία
-                std::uniform_int_distribution<size_t> dist(0, n - 1);
+                uniform_int_distribution<size_t> dist(0, n - 1);
                 new_centroids[c] = data[dist(rng)];
             }
         }
@@ -190,8 +193,8 @@ int KMeans::fit(const std::vector<std::vector<float>>& data) {
             shift += squared_distance(centroids_[c], new_centroids[c]);
 
         if (verbose_) {
-            std::cout << "Iteration " << iter + 1
-                      << ": centroid shift = " << shift << std::endl;
+            cout << "Iteration " << iter + 1
+                      << ": centroid shift = " << shift << endl;
         }
 
         centroids_ = new_centroids;
@@ -201,20 +204,20 @@ int KMeans::fit(const std::vector<std::vector<float>>& data) {
     }
 
     if (verbose_) {
-        std::cout << "Converged after " << iter + 1 << " iterations." << std::endl;
+        cout << "Converged after " << iter + 1 << " iterations." << endl;
     }
 
     return iter + 1;
 }
 
 //πρόβλεψη της ομάδας για ένα νέο σημείο
-int KMeans::predict(const std::vector<float>& point) const {
+int KMeans::predict(const vector<float>& point) const {
     if (centroids_.empty()) {
-        std::cerr << "Error: KMeans model not fitted yet!" << std::endl;
+        cerr << "Error: KMeans model not fitted yet!" << endl;
         return -1;
     }
 
-    float best_dist = std::numeric_limits<float>::max();
+    float best_dist = numeric_limits<float>::max();
     int best_cluster = -1;
 
     for (int c = 0; c < k_; ++c) {

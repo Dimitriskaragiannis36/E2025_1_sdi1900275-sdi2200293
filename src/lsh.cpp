@@ -1,19 +1,23 @@
 #include "lsh.h"
+#include "helper.h"
 #include <iostream>
 #include <vector>
 #include <random>
 #include <unordered_set>
 #include <algorithm>
+using utils::euclidean_distance;
+
 using namespace std;
 
 namespace nn {
 
-LSH::LSH(int dim, int L, int k, int w, unsigned int seed, DistanceFunc dist_func)
-    : dim_(dim), L_(L), k_(k), w_(w), seed_(seed), distance_func_(std::move(dist_func)) {
-    tables_.resize(L_); //πιθανόν περιττό
+LSH::LSH(int dim, int L, int k, int w, unsigned int seed, utils::DistanceFunc dist_func)
+    : dim_(dim), L_(L), k_(k), w_(w), seed_(seed), distance_func_(::move(dist_func)) {
     v_.assign(L_, vector<vector<float>>(k_, vector<float>(dim_, 0.0f)));
     t_.assign(L_, vector<float>(k_, 0.0f));
     r_.assign(L_, vector<uint32_t>(k_, 0));
+
+    if (!distance_func_) distance_func_ = euclidean_distance;
 
     //random generators 
     mt19937 rng(seed_); 
@@ -37,13 +41,6 @@ LSH::LSH(int dim, int L, int k, int w, unsigned int seed, DistanceFunc dist_func
               << ", k=" << k_
               << ", w=" << w_
               << endl;
-
-    if (!distance_func_) {
-        //αν δεν δόθηκε custom μετρική, χρησιμοποίησε την default ευκλείδεια
-        distance_func_ = [this](const vector<float>& a, const vector<float>& b) {
-            return euclidean_distance(a, b);
-        };
-    }
 
 }
 
@@ -79,16 +76,6 @@ uint64_t LSH::compute_id(const vector<long long>& hashes, int table_idx) const {
 //g(p) = ID(p) mod TableSize
 int LSH::compute_bucket_id(uint64_t id) const {
     return (int)(id % table_size_);
-}
-
-//απλή ευκλείδεια απόσταση
-float LSH::euclidean_distance(const vector<float>& x, const vector<float>& y) const {
-    float dist = 0.0f;
-    for (int i = 0; i < dim_; ++i) {
-        float diff = x[i] - y[i];
-        dist += diff * diff;
-    }
-    return sqrt(dist);
 }
 
 //χτίσιμο index
@@ -160,10 +147,11 @@ vector<int> LSH::query(const vector<float>& q, int num_neighbors) const {
 
 //εκκαθάριση index
 void LSH::clear_index() {
-    for (auto& table : tables_) {
-        table.clear();
-    }
-    cout << "Index cleared." << endl;
+    for (auto &table : tables_)
+        for (auto &bucket : table)
+            bucket.clear();
+    tables_.clear();
+    cout << "Index cleared.\n";
 }
 
 //(α) ένας πλησιέστερος γείτονας (ε-approximate NN)
