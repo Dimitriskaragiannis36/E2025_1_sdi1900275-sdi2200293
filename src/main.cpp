@@ -1,6 +1,8 @@
 #include "helper.h"
 #include "lsh.h"
 #include "mnist.h"
+#include "kmeans.h"
+#include "silhouette.h"
 #include <iostream>
 #include <fstream>
 #include <chrono>
@@ -15,7 +17,7 @@ int main(int argc, char* argv[]) {
     //φόρτωση δεδομένων
     vector<vector<float>> data, queries;
     if (params.type == "mnist") {
-        data = load_mnist_images(params.input_file, -1);
+        data = load_mnist_images(params.input_file, 10000);
         queries = load_mnist_images(params.query_file, 10);
     } else {
         cerr << "SIFT loader not implemented yet!\n";
@@ -40,5 +42,21 @@ int main(int argc, char* argv[]) {
     //καθαρισμός
     out.close();
     lsh.clear_index();
+
+
+    //δοκιμαστικό: υπολογισμός clustering και silhouette
+    cout << "\nRunning K-Means clustering on the same dataset...\n";
+
+    clustering::KMeans model(3, 100, 1e-4,
+                             clustering::KMeans::InitMethod::KMEANS_PLUS_PLUS,
+                             42, true, utils::euclidean_distance);
+
+    model.fit(data);
+
+    clustering::Silhouette sil;
+    float score = sil.compute(data, model.labels(), model.k());
+
+    cout << "\nSilhouette score = " << score << endl;
+
     return 0;
 }
