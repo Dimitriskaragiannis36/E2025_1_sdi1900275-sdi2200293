@@ -66,14 +66,14 @@ namespace utils {
         for (size_t qi = 0; qi < queries.size(); ++qi) {
             out << "LSH\nQuery: " << qi << "\n";
 
-            // approximate kNN
+            //approximate kNN
             auto t0 = clock::now();
             auto knn = lsh.knn_query(queries[qi], params.N);  // τώρα pair<int,float>
             auto t1 = clock::now();
             double tApprox_ms = chrono::duration<double, milli>(t1 - t0).count();
             sum_tApprox += tApprox_ms;
 
-            // true kNN
+            //true kNN
             auto t0_true = clock::now();
             vector<pair<double,int>> true_scores;
             true_scores.reserve(data.size());
@@ -100,7 +100,7 @@ namespace utils {
             double tTrue_ms = chrono::duration<double, milli>(t1_true - t0_true).count();
             sum_tTrue += tTrue_ms;
 
-            // εκτύπωση
+            //εκτύπωση
             vector<double> approx_dists;
             int nn_counter = 1;
             for (auto [idx, dist] : knn) {
@@ -122,7 +122,7 @@ namespace utils {
                 out << "distanceTrue: " << trueDist << "\n";
             }
 
-            // metrics
+            //metrics
             if (!approx_dists.empty() && !true_dists.empty() && true_dists[0] > 1e-12)
                 sum_AF += approx_dists[0] / true_dists[0];
             unordered_set<int> true_set(true_ids.begin(), true_ids.end());
@@ -141,7 +141,7 @@ namespace utils {
             out << "\n";
         }
 
-        // summary
+        //summary
         auto t1_total = clock::now();
         double total_sec = chrono::duration<double>(t1_total - t0_total).count();
         double QPS = queries.empty() ? 0.0 : queries.size() / total_sec;

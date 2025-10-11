@@ -21,10 +21,10 @@ KMeans::KMeans(int k, int max_iters, float tol,
       verbose_(verbose),
       dist_func_(::move(dist_func)) {}
 
-void KMeans::clear() {
+/*void KMeans::clear() {
     centroids_.clear();
     labels_.clear();
-}
+}*/
 
 //υλοποίηση του αλγορίθμου k-means
 float KMeans::squared_distance(const vector<float>& a,
@@ -61,8 +61,6 @@ void KMeans::init_random(const vector<vector<float>>& data,
 void KMeans::init_kmeans_pp(const vector<vector<float>>& data,
                             mt19937& rng) {
     size_t n = data.size();
-    //size_t d = data[0].size();
-
     uniform_int_distribution<size_t> uni_dist(0, n - 1);
     centroids_.clear();
     centroids_.push_back(data[uni_dist(rng)]); //πρώτο κέντρο τυχαία
@@ -73,18 +71,14 @@ void KMeans::init_kmeans_pp(const vector<vector<float>>& data,
     for (int c = 1; c < k_; ++c) {
         //ενημέρωση των αποστάσεων από το κοντινότερο υπάρχον κέντρο
         for (size_t i = 0; i < n; ++i) {
-            float d2 = squared_distance(data[i], centroids_.back());
+            float d = dist_func_(data[i], centroids_.back());
+            float d2 = d * d; //απόσταση στο τετράγωνο
             if (d2 < dist_sq[i])
                 dist_sq[i] = d2;
         }
 
-        //επιλογή νέου κέντρου με πιθανότητα D(x)^2
-        float sum = 0.0f;
-        for (float val : dist_sq)
-            sum += val;
-
-        if (sum == 0.0f) {
-            //όλα τα σημεία ταυτίζονται — διάλεξε τυχαία
+        //αν όλες οι αποστάσεις είναι μηδέν, επέλεξε τυχαία
+        if (all_of(dist_sq.begin(), dist_sq.end(), [](float d){ return d == 0.0f; })) {
             centroids_.push_back(data[uni_dist(rng)]);
             continue;
         }
@@ -151,8 +145,9 @@ int KMeans::fit(const vector<vector<float>>& data) {
 
             for (int c = 0; c < k_; ++c) {
                 float dist = dist_func_(data[i], centroids_[c]);
-                if (dist < best_dist) {
-                    best_dist = dist;
+                float dist2 = dist * dist;
+                if (dist2 < best_dist) {
+                    best_dist = dist2;
                     best_cluster = c;
                 }
             }
@@ -189,8 +184,10 @@ int KMeans::fit(const vector<vector<float>>& data) {
 
         //έλεγχος σύγκλισης
         float shift = 0.0f;
-        for (int c = 0; c < k_; ++c)
-            shift += squared_distance(centroids_[c], new_centroids[c]);
+        for (int c = 0; c < k_; ++c) {
+            float d = dist_func_(centroids_[c], new_centroids[c]);
+            shift += d * d; //τετραγωνίζεις τη μετατόπιση
+        }
 
         if (verbose_) {
             cout << "Iteration " << iter + 1
@@ -221,7 +218,7 @@ int KMeans::predict(const vector<float>& point) const {
     int best_cluster = -1;
 
     for (int c = 0; c < k_; ++c) {
-        float dist = squared_distance(point, centroids_[c]);
+        float dist = dist_func_(point, centroids_[c]);
         if (dist < best_dist) {
             best_dist = dist;
             best_cluster = c;
