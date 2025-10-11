@@ -5,15 +5,15 @@
 #include <string>
 #include <fstream>
 #include <functional>
+#include <cmath>
+#include <unordered_set>
 
-using namespace std;
-
-namespace nn { class LSH; } 
 
 namespace utils {
+//τύπος για συνάρτηση απόστασης
+using DistanceFunc = std::function<float(const std::vector<float>&, const std::vector<float>&)>;
 
-using DistanceFunc = function<float(const vector<float>&, const vector<float>&)>;
-//δομή για τις παραμέτρους του προγράμματος
+//παράμετροι από γραμμή εντολών
 struct Params {
     int seed = 1;
     int k = 4;
@@ -21,30 +21,33 @@ struct Params {
     int w = 4;
     int N = 1;
     float R = 2000.0f;
-    string input_file = "data/input.dat";
-    string query_file = "data/query.dat";
-    string output_file = "results.txt";
-    string type = "mnist";
+    std::string input_file = "data/input.dat";
+    std::string query_file = "data/query.dat";
+    std::string output_file = "results.txt";
+    std::string type = "mnist";
     bool do_range = true;
     bool use_lsh = false;
 };
 
-//συνάρτηση για την ανάλυση των παραμέτρων από τη γραμμή εντολών
+//ανάλυση παραμέτρων από γραμμή εντολών
 Params parse_args(int argc, char* argv[]);
 
-//συνάρτηση για την εκτύπωση των παραμέτρων
+//εκτύπωση παραμέτρων
 void print_params(const Params& p);
 
-//συνάρτηση για την ανάγνωση δεδομένων από αρχείο
-void run_queries(nn::LSH& lsh,
-                 const vector<vector<float>>& data,
-                 const vector<vector<float>>& queries,
+//template-based run_queries (λειτουργεί για LSH, Hypercube, IVF κ.λπ.)
+template <typename IndexType>
+void run_queries(IndexType& index,
+                 const std::vector<std::vector<float>>& data,
+                 const std::vector<std::vector<float>>& queries,
                  const Params& params,
-                 ofstream& out);
+                 std::ofstream& out);
 
-//ευκλείδεια απόσταση
-float euclidean_distance(const vector<float>& x, const vector<float>& y);
+//απλή ευκλείδεια απόσταση
+float euclidean_distance(const std::vector<float>& x, const std::vector<float>& y);
 
 } //namespace utils
+
+#include "helper.tpp" //θα βάλουμε εδώ το template body
 
 #endif //HELPER_H
