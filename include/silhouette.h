@@ -5,6 +5,8 @@
 #include <vector>
 #include <cstddef>
 
+using namespace std;
+
 namespace clustering {
 
 class Silhouette {
@@ -14,21 +16,31 @@ public:
 
     //υπολογίζει το συνολικό μέσο silhouette score
     float compute(
-        const std::vector<std::vector<float>>& data,
-        const std::vector<int>& labels,
+        const vector<vector<float>>& data,
+        const vector<int>& labels,
         int k
     ) const;
 
     //υπολογίζει και επιστρέφει τα επιμέρους s(i)
-    std::vector<float> compute_per_point(
-        const std::vector<std::vector<float>>& data,
-        const std::vector<int>& labels,
+    vector<float> compute_per_point(
+        const vector<vector<float>>& data,
+        const vector<int>& labels,
         int k
     ) const;
+
+    //υπολογίζει και επιστρέφει τα μέση silhouette score ανά cluster
+    vector<float> compute_per_cluster(
+    const vector<vector<float>>& data,
+    const vector<int>& labels,
+    int k
+    ) const;
+
 
 private:
     utils::DistanceFunc dist_func_;
 };
+
+
 
 } //namespace clustering
 

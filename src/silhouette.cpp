@@ -8,19 +8,19 @@ using namespace std;
 namespace clustering {
 
 Silhouette::Silhouette(utils::DistanceFunc dist_func)
-    : dist_func_(std::move(dist_func)) {}
+    : dist_func_(move(dist_func)) {}
 
 
-std::vector<float> Silhouette::compute_per_point(
-    const std::vector<std::vector<float>>& data,
-    const std::vector<int>& labels,
+vector<float> Silhouette::compute_per_point(
+    const vector<vector<float>>& data,
+    const vector<int>& labels,
     int k
 ) const {
     size_t n = data.size();
-    std::vector<float> s_values(n, 0.0f);
+    vector<float> s_values(n, 0.0f);
 
     //ομαδοποιούμε τα σημεία ανά cluster για αποδοτικότητα
-    std::vector<std::vector<size_t>> clusters(k);
+    vector<vector<size_t>> clusters(k);
     for (size_t i = 0; i < n; ++i)
         clusters[labels[i]].push_back(i);
 
@@ -41,7 +41,7 @@ std::vector<float> Silhouette::compute_per_point(
         }
 
         //υπολογισμός b(i): ελάχιστη μέση απόσταση σε άλλο cluster
-        float b_i = std::numeric_limits<float>::max();
+        float b_i = numeric_limits<float>::max();
         for (int c = 0; c < k; ++c) {
             if (c == cluster_i || clusters[c].empty()) continue;
             float avg_dist = 0.0f;
@@ -70,15 +70,40 @@ std::vector<float> Silhouette::compute_per_point(
     return s_values;
 }
 
-
+//υπολογίζει το συνολικό μέσο silhouette score
 float Silhouette::compute(
-    const std::vector<std::vector<float>>& data,
-    const std::vector<int>& labels,
+    const vector<vector<float>>& data,
+    const vector<int>& labels,
     int k
 ) const {
     auto s_values = compute_per_point(data, labels, k);
-    float sum = std::accumulate(s_values.begin(), s_values.end(), 0.0f);
+    float sum = accumulate(s_values.begin(), s_values.end(), 0.0f);
     return s_values.empty() ? 0.0f : sum / s_values.size();
 }
+
+//υπολογίζει και επιστρέφει τα μέση silhouette score ανά cluster
+vector<float> Silhouette::compute_per_cluster(
+    const vector<vector<float>>& data,
+    const vector<int>& labels,
+    int k
+) const {
+    auto s_values = compute_per_point(data, labels, k);
+    vector<float> cluster_avg(k, 0.0f);
+    vector<int> cluster_count(k, 0);
+
+    for (size_t i = 0; i < labels.size(); ++i) {
+        int c = labels[i];
+        cluster_avg[c] += s_values[i];
+        cluster_count[c]++;
+    }
+
+    for (int c = 0; c < k; ++c) {
+        if (cluster_count[c] > 0)
+            cluster_avg[c] /= cluster_count[c];
+    }
+
+    return cluster_avg;
+}
+
 
 } //namespace clustering
