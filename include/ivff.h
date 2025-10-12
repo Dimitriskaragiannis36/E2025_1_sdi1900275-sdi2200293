@@ -15,9 +15,13 @@ namespace ivf {
 
 //IVF-Flat Index
 class IVFFlat {
-public:
-    IVFFlat(int nlist, int nprobe, unsigned int seed = 1,
-            utils::DistanceFunc dist_func = utils::euclidean_distance);
+public: //κονστράκτορας με τιμές ώστε να φτιάξει τα αντικείμενα
+    IVFFlat(int kclusters = 4,
+            int nprobe = 5,
+            unsigned int seed = 1,
+            int N = 1,
+            float R = 2000.0f,
+            utils::DistanceFunc dist_func = nullptr);
 
     //κατασκευή του index
     void build_index(const std::vector<std::vector<float>>& data);
@@ -35,16 +39,18 @@ public:
     void clear_index();
 
     //getters
-    int nlist() const { return nlist_; }
+    int nlist() const { return  kclusters_; }
     int nprobe() const { return nprobe_; }
     const std::vector<std::vector<float>>& centroids() const { return centroids_; }
     const std::vector<std::vector<float>>& data() const { return *data_ptr_; }
     utils::DistanceFunc distance_func() const { return dist_func_; }
 
 private:
-    int nlist_;    //αριθμός clusters (inverted lists)
-    int nprobe_;   //αριθμός clusters που εξετάζονται ανά query
+    int kclusters_;    //αριθμός clusters
+    int nprobe_;       //αριθμός clusters που εξετάζονται
     unsigned int seed_;
+    int N_;            //default N για KNN
+    float R_;          //default R για range search
     utils::DistanceFunc dist_func_;
 
     std::vector<std::vector<float>> centroids_;     //C = {c1, ..., ck}

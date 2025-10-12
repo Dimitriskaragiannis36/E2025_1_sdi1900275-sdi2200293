@@ -9,7 +9,7 @@ namespace nn {
 
 class LSH {
 public:
-    //κονστράκτορας με βασικές παραμέτρους
+    //κονστράκτορας με τιμές ώστε να φτιάξει τα αντικείμενα
     LSH(int dim, int L = 5, int k = 4, int w = 4, unsigned int seed = 1,
         utils::DistanceFunc dist_func = nullptr);
 

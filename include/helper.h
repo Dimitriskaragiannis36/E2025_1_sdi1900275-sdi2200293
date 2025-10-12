@@ -13,7 +13,7 @@ namespace utils {
 //τύπος για συνάρτηση απόστασης
 using DistanceFunc = std::function<float(const std::vector<float>&, const std::vector<float>&)>;
 
-//παράμετροι από γραμμή εντολών
+//παράμετροι από γραμμή εντολών (και default τιμές) για ασφάλεια
 struct Params {
     //κοινές παράμετροι
     int seed = 1;

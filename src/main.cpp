@@ -47,7 +47,8 @@ int main(int argc, char* argv[]) {
     //εκτέλεση ivfflat
     else if (params.use_ivfflat) {
         std::cout << "\n>> Using IVFFlat index...\n";
-        ivf::IVFFlat index(params.kclusters, params.nprobe, params.seed, utils::euclidean_distance);
+        ivf::IVFFlat index(params.kclusters, params.nprobe, params.seed, params.N, params.R);
+
         index.build_index(data);
         utils::run_queries(index, data, queries, params, out);
 
