@@ -14,7 +14,19 @@ void run_queries(IndexType& index,
                  const std::vector<std::vector<float>>& queries,
                  const Params& params,
                  std::ofstream& out)
-{    //μετρήσεις χρόνου
+{   //επικεφαλίδα
+    if (params.use_lsh)
+        out << "LSH" << std::endl;
+    else if (params.use_ivfflat)
+        out << "IVFFlat" << std::endl;
+    /*else if (params.use_ivfpq)
+        out << "IVFPQ" << std::endl;
+    else if (params.use_hypercube)
+        out << "Hypercube" << std::endl;*/
+    else
+        out << "UnknownMethod" << std::endl;
+
+    //μετρήσεις χρόνου
     using clock = std::chrono::high_resolution_clock;
 
     auto t0_total = clock::now();
@@ -24,7 +36,7 @@ void run_queries(IndexType& index,
         out << "Query: " << qi << "\n";
 
         auto t0 = clock::now();
-        auto knn = index.knn_query(queries[qi], params.N);  // 🟢 generic call
+        auto knn = index.knn_query(queries[qi], params.N); 
         auto t1 = clock::now();
         double tApprox_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
         sum_tApprox += tApprox_ms;

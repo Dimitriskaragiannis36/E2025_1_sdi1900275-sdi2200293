@@ -15,10 +15,8 @@ using DistanceFunc = std::function<float(const std::vector<float>&, const std::v
 
 //παράμετροι από γραμμή εντολών
 struct Params {
+    //κοινές παράμετροι
     int seed = 1;
-    int k = 4;
-    int L = 5;
-    int w = 4;
     int N = 1;
     float R = 2000.0f;
     std::string input_file = "data/input.dat";
@@ -26,7 +24,17 @@ struct Params {
     std::string output_file = "results.txt";
     std::string type = "mnist";
     bool do_range = true;
+
+    //LSH
+    int k = 4;
+    int L = 5;
+    int w = 4;
     bool use_lsh = false;
+
+    //IVFFlat
+    bool use_ivfflat = false;
+    int kclusters = 50;   // αριθμός συστάδων (nlist)
+    int nprobe = 5;       // αριθμός clusters που εξετάζονται κατά την αναζήτηση
 };
 
 //ανάλυση παραμέτρων από γραμμή εντολών

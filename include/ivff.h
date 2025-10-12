@@ -32,7 +32,7 @@ public:
     std::vector<int> query_candidates(const std::vector<float>& q) const;
 
     //καθαρισμός
-    void clear();
+    void clear_index();
 
     //getters
     int nlist() const { return nlist_; }
@@ -51,7 +51,6 @@ private:
     std::vector<std::vector<int>> inverted_lists_;  //IL_j = ids των points
     const std::vector<std::vector<float>>* data_ptr_; //pointer στα data
 
-    float distance_sq(const std::vector<float>& a, const std::vector<float>& b) const;
 };
 
 } //namespace ivf

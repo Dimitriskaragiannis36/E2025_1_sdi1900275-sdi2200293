@@ -16,46 +16,6 @@ IVFFlat::IVFFlat(int nlist, int nprobe, unsigned int seed,
       dist_func_(::std::move(dist_func)),
       data_ptr_(nullptr) {}
 
-//υπολογισμός τετραγωνικής απόστασης
-float IVFFlat::distance_sq(const std::vector<float>& a, const std::vector<float>& b) const {
-    float d = dist_func_(a, b);
-    return d * d;
-}
-
-//επιλογή καλύτερου k με χρήση Silhouette
-static int select_best_k_by_silhouette(
-    const std::vector<std::vector<float>>& data,
-    int k_min, int k_max,
-    utils::DistanceFunc dist_func,
-    unsigned int seed)
-{
-    using namespace clustering;
-    float best_score = -1.0f;
-    int best_k = k_min;
-
-    for (int k = k_min; k <= k_max; ++k) {
-        KMeans kmeans(k, 100, 1e-4f,
-                      KMeans::InitMethod::KMEANS_PLUS_PLUS,
-                      seed, false, dist_func);
-        kmeans.fit(data);
-
-        Silhouette sil(dist_func);
-        float score = sil.compute(data, kmeans.labels(), k);
-
-        std::cerr << "[Silhouette] k=" << k
-                  << " score=" << score << std::endl;
-
-        if (score > best_score) {
-            best_score = score;
-            best_k = k;
-        }
-    }
-
-    std::cerr << "[Silhouette] Best k=" << best_k
-              << " (score=" << best_score << ")\n";
-    return best_k;
-}
-
 //κατασκευή του index
 void IVFFlat::build_index(const std::vector<std::vector<float>>& data) {
     if (data.empty()) return;
@@ -130,7 +90,7 @@ void IVFFlat::build_index(const std::vector<std::vector<float>>& data) {
         float bestd = std::numeric_limits<float>::max();
         int bestk = -1;
         for (int k = 0; k < nlist_; ++k) {
-            float d = distance_sq(x, centroids_[k]);
+            float d = dist_func_(x, centroids_[k]);
             if (d < bestd) {
                 bestd = d;
                 bestk = k;
@@ -148,7 +108,7 @@ std::vector<int> IVFFlat::query_candidates(const std::vector<float>& q) const {
     std::vector<std::pair<float,int>> centroid_dists;
     centroid_dists.reserve(nlist_);
     for (int k = 0; k < nlist_; ++k) {
-        float d = distance_sq(q, centroids_[k]);
+        float d = dist_func_(q, centroids_[k]);
         centroid_dists.emplace_back(d, k);
     }
 
@@ -210,10 +170,11 @@ std::vector<int> IVFFlat::range_search(const std::vector<float>& q, float R) con
 }
 
 //καθαρισμός
-void IVFFlat::clear() {
+void IVFFlat::clear_index() {
     centroids_.clear();
     inverted_lists_.clear();
     data_ptr_ = nullptr;
+    std::cerr << "[IVF] Index cleared.\n";
 }
 
 } //namespace ivf
