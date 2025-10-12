@@ -83,4 +83,4 @@ float euclidean_distance(const std::vector<float>& x, const std::vector<float>& 
     return std::sqrt(dist);
 }
 
-} // namespace utils
+} //namespace utils

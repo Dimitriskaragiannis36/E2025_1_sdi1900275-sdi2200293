@@ -21,22 +21,10 @@ KMeans::KMeans(int k, int max_iters, float tol,
       verbose_(verbose),
       dist_func_(::move(dist_func)) {}
 
-/*void KMeans::clear() {
+void KMeans::clear() {
     centroids_.clear();
     labels_.clear();
-}*/
-
-//υλοποίηση του αλγορίθμου k-means
-float KMeans::squared_distance(const vector<float>& a,
-                               const vector<float>& b) const {
-    float dist = 0.0f;
-    for (size_t i = 0; i < a.size(); ++i) {
-        float diff = a[i] - b[i];
-        dist += diff * diff;
-    }
-    return dist;
 }
-
 
 //τυχαία αρχικοποίηση των κεντροειδών από τα δεδομένα
 void KMeans::init_random(const vector<vector<float>>& data,
@@ -145,9 +133,8 @@ int KMeans::fit(const vector<vector<float>>& data) {
 
             for (int c = 0; c < k_; ++c) {
                 float dist = dist_func_(data[i], centroids_[c]);
-                float dist2 = dist * dist;
-                if (dist2 < best_dist) {
-                    best_dist = dist2;
+                if (dist < best_dist) {
+                    best_dist = dist;
                     best_cluster = c;
                 }
             }
@@ -186,7 +173,7 @@ int KMeans::fit(const vector<vector<float>>& data) {
         float shift = 0.0f;
         for (int c = 0; c < k_; ++c) {
             float d = dist_func_(centroids_[c], new_centroids[c]);
-            shift += d * d; //τετραγωνίζεις τη μετατόπιση
+            shift += d; 
         }
 
         if (verbose_) {

@@ -50,6 +50,23 @@ int main(int argc, char* argv[]) {
         ivf::IVFFlat index(params.kclusters, params.nprobe, params.seed, utils::euclidean_distance);
         index.build_index(data);
         utils::run_queries(index, data, queries, params, out);
+
+        //προαιρετικό: K-Means + Silhouette
+        std::cout << "\nComputing Silhouette score for IVFFlat clusters...\n";
+
+        clustering::KMeans model(
+            3, 100, 1e-4,
+            clustering::KMeans::InitMethod::KMEANS_PLUS_PLUS,
+            42, true, utils::euclidean_distance
+        );
+
+        model.fit(data);
+
+        clustering::Silhouette sil;
+        float score = sil.compute(data, model.labels(), model.k());
+
+        std::cout << "\nSilhouette score = " << score << std::endl;
+        
         index.clear_index();
     }
 
@@ -67,25 +84,6 @@ int main(int argc, char* argv[]) {
     }
 
     out.close();
-
-
-    
-    //προαιρετικό: K-Means + Silhouette
-    std::cout << "\nRunning K-Means clustering on the same dataset...\n";
-
-    clustering::KMeans model(
-        3, 100, 1e-4,
-        clustering::KMeans::InitMethod::KMEANS_PLUS_PLUS,
-        42, true, utils::euclidean_distance
-    );
-
-    model.fit(data);
-
-    clustering::Silhouette sil;
-    float score = sil.compute(data, model.labels(), model.k());
-
-    std::cout << "\nSilhouette score = " << score << std::endl;
-    
 
     return 0;
 }
