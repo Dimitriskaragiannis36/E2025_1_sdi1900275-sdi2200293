@@ -12,7 +12,7 @@ namespace nn
 {
 
   /*A2*/
-  /*προσθήκη ανίχνευσης κορυφών: παραγωγή λίστας κορυφών προς έλεγχο με αύξουσα απόσταση Hamming (BFS σε γειτονιά Hamming-1)*/
+  /*προσθήκη δομής κάδων (cube_) και πλήρους υλοποίησης του build_index()*/
   class Hypercube
   {
   public:
@@ -24,7 +24,7 @@ namespace nn
               unsigned int seed = 1,
               utils::DistanceFunc dist_func = utils::euclidean_distance);
 
-    /*δημιουργία δείκτη πάνω στο dataset*/
+    /*δημιουργία δείκτη πάνω στο dataset (κατανομή σε κορυφές του hypercube)*/
     void build_index(const std::vector<std::vector<float>> &data);
 
     /*k-NN (επιστρέφει ζεύγη (index, απόσταση))*/
@@ -37,10 +37,10 @@ namespace nn
     void clear_index();
 
   private:
-    int dim_;   /*διαστατικότητα πρωτογενούς χώρου*/
-    int kproj_; /*αριθμός προβολών (k')*/
-    int w_;     /*παράμετρος πλάτους κουβάδων*/
-    int M_;
+    int dim_;                       /*διαστατικότητα πρωτογενούς χώρου*/
+    int kproj_;                     /*αριθμός προβολών (k')*/
+    int w_;                         /*παράμετρος πλάτους κουβάδων*/
+    int M_;                         /*ανώτατο πλήθος υποψηφίων*/
     int probes_;                    /*μέγιστος αριθμός κορυφών για ανίχνευση*/
     unsigned int seed_;             /*σπόρος RNG*/
     utils::DistanceFunc dist_func_; /*μετρική απόστασης*/
@@ -60,11 +60,14 @@ namespace nn
     /*απεικόνιση hash -> bit ανά προβολή*/
     std::vector<std::unordered_map<long long, int>> bit_maps_;
 
-    /*βοηθητικές συναρτήσεις*/
+    /*κάδοι hypercube: vertex id -> λίστα indices σημείων που ανήκουν στην κορυφή*/
+    std::unordered_map<std::uint64_t, std::vector<int>> cube_;
+
+    /*--- Βοηθητικές συναρτήσεις ---*/
     /*υπολογισμός των k' ακέραιων τιμών h_i(p) για ένα διάνυσμα p*/
     std::vector<long long> compute_hashes(const std::vector<float> &p) const;
 
-    /*επιστροφή bit για (proj_id, hval) με συνεπή, ντετερμινιστική ανάθεση*/
+    /*επιστροφή bit για (proj_id, hval) με ντετερμινιστική ανάθεση*/
     int bit_for(int proj_id, long long hval) const;
 
     /*συσκευασία των k' bits σε 64-bit ταυτότητα κορυφής*/

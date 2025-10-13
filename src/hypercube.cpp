@@ -8,7 +8,7 @@
 namespace nn
 {
 
-    /*προσθήκη vertices_to_probe() για BFS σε χώρο Hamming.*/
+    /*build_index() γεμίζει το cube_ με βάση τα vertex ids*/
     Hypercube::Hypercube(int dim,
                          int kproj,
                          int w,
@@ -41,25 +41,41 @@ namespace nn
             t_[i] = uni_(rng_);
         }
 
-        std::cout << "Hypercube ctor (commit 6): "
+        std::cout << "Hypercube ctor (commit 7): "
                   << "dim=" << dim_
                   << " kproj=" << kproj_
                   << " w=" << w_
                   << " M=" << M_
                   << " probes=" << probes_
                   << " seed=" << seed_
-                  << " [vertex probing ready]\n";
+                  << " [cube buckets ready]\n";
     }
 
-    /*σύνδεση dataset (δεν χτίζουμε δομή ακόμα)*/
+    /*δημιουργία του δείκτη: υπολογίζει για κάθε σημείο το vertex id και τοποθετεί το index στον αντίστοιχο κάδο.*/
     void Hypercube::build_index(const std::vector<std::vector<float>> &data)
     {
         data_ptr_ = &data;
-        std::cout << "[Hypercube] build_index(): dataset attached (commit 6)\n";
+
+        /*καθαρισμός προηγούμενης κατάστασης*/
+        cube_.clear();
+
+        /*για κάθε σημείο: hashes -> bits -> vertex id -> push index στον κάδο*/
+        const int n = static_cast<int>(data.size());
+        for (int idx = 0; idx < n; ++idx)
+        {
+            const auto h = compute_hashes(data[idx]);
+            const std::uint64_t vtx = compute_vertex_id(h);
+            cube_[vtx].push_back(idx);
+        }
+
+        std::cout << "[Hypercube] build_index(): "
+                  << "points=" << n
+                  << ", non_empty_vertices=" << cube_.size()
+                  << std::endl;
     }
 
     /*υπολογισμός των k' ακέραιων hash τιμών για διάνυσμα p*/
-    /*h_i(p) = floor( (v_i · p + t_i) / w )*/
+    // h_i(p) = floor( (v_i · p + t_i) / w )
     std::vector<long long> Hypercube::compute_hashes(const std::vector<float> &p) const
     {
         std::vector<long long> h(kproj_);
@@ -76,7 +92,7 @@ namespace nn
         return h;
     }
 
-    /*επιστροφή bit ∈ {0,1} για (proj_id, hval) μεντετερμινιστική ανάθεση.*/
+    /*επιστρέφει bit ∈ {0,1} για (proj_id, hval) μεντετερμινιστική ανάθεση.*/
     int Hypercube::bit_for(int proj_id, long long hval) const
     {
         auto &mp = const_cast<std::unordered_map<long long, int> &>(bit_maps_[proj_id]);
@@ -96,8 +112,8 @@ namespace nn
         return bit;
     }
 
-    /*συσκευάζει τα k' bits σε 64-bit αναγνωριστικό κορυφής.
-    bit i -> θέση i στο αποτέλεσμα. Υπόθεση: kproj_ ≤ 64.*/
+    /*συσκευάζει τα k' bits σε 64-bit αναγνωριστικό κορυφής*/
+    /*bit i -> θέση i στο αποτέλεσμα. Υπόθεση: kproj_ ≤ 64.*/
     std::uint64_t Hypercube::compute_vertex_id(const std::vector<long long> &hashes) const
     {
         std::uint64_t bits = 0ULL;
@@ -110,24 +126,20 @@ namespace nn
         return bits;
     }
 
-    /*επιστρέφει μέχρι 'probes_' κορυφές ξεκινώντας από τη βάση 'base'.
-    Διασχίζει τον χώρο κορυφών με BFS παράγοντας γείτονες Hamming-1.
-    Η σειρά επιστροφής ακολουθεί αύξουσα απόσταση Hamming (base πρώτα).*/
+    /*επιστρέφει μέχρι 'probes_' κορυφές ξεκινώντας από τη βάση 'base'*/
+    /*διασχίζει τον χώρο κορυφών με BFS παράγοντας γείτονες Hamming-1*/
     std::vector<std::uint64_t> Hypercube::vertices_to_probe(std::uint64_t base) const
     {
         std::vector<std::uint64_t> out;
         out.reserve(probes_ > 0 ? probes_ : 1);
 
-        /*αν το πλήθος ζητούμενων κορυφών είναι 0, δεν χρειάζεται δουλειά.*/
         if (probes_ <= 0)
             return out;
 
-        /*τοποθετούμε την αρχική κορυφή*/
         out.push_back(base);
         if (probes_ == 1)
             return out;
 
-        /*BFS με ουρά και αποφυγή διπλοεπίσκεψης*/
         std::queue<std::uint64_t> q;
         std::unordered_set<std::uint64_t> seen;
         q.push(base);
@@ -138,7 +150,6 @@ namespace nn
             const std::uint64_t cur = q.front();
             q.pop();
 
-            /*γεννάμε όλους τους γείτονες Hamming-1 (flip κάθε bit 0..kproj_-1)*/
             for (int i = 0; i < kproj_; ++i)
             {
                 const std::uint64_t nei = cur ^ (1ULL << i);
@@ -152,11 +163,8 @@ namespace nn
             }
         }
 
-        /*σε περίπτωση υπερχείλισης (θεωρητικά), περικόπτουμε στα probes_*/
         if (static_cast<int>(out.size()) > probes_)
-        {
             out.resize(probes_);
-        }
         return out;
     }
 
@@ -172,7 +180,10 @@ namespace nn
 
     void Hypercube::clear_index()
     {
-        std::cout << "[Hypercube] clear_index():\n";
+        /*καθαρισμός μόνο της δομής κάδων και αποσύνδεση dataset*/
+        cube_.clear();
+        data_ptr_ = nullptr;
+        std::cout << "[Hypercube] clear_index(): cube cleared (commit 7)\n";
     }
 
 } /*namespace nn*/
