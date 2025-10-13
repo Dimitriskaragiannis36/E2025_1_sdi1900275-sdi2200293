@@ -5,12 +5,14 @@
 #include <vector>
 #include <utility>
 #include <random>
+#include <unordered_map>
+#include <cstdint>
 
 namespace nn
 {
 
   /*Α2*/
-  /*προσθήκη συνάρτησης κατακερματισμού h_i(p) = floor((v_i·p + t_i)/w).*/
+  /*προσθήκη συνεπούς απεικόνισης hash -> bit και υπολογισμού ταυτότητας κορυφής (vertex id)*/
   class Hypercube
   {
   public:
@@ -43,20 +45,29 @@ namespace nn
     unsigned int seed_;             /*σπόρος RNG*/
     utils::DistanceFunc dist_func_; /*μετρική απόστασης*/
 
-    /*τυχαιοποιητής & κατανομές*/
+    /*τυχαίος αριθμός & κατανομές*/
     std::mt19937 rng_;
     std::normal_distribution<float> normal_;    /*για v ~ N(0,1)*/
     std::uniform_real_distribution<float> uni_; /*για t ~ U(0,w)*/
 
     /*προβολές και μετατοπίσεις*/
     std::vector<std::vector<float>> v_; /*v_[i].size()==dim_*/
-    std::vector<float> t_;              /* t_[i] ∈ [0, w) */
+    std::vector<float> t_;              /*t_[i] ∈ [0, w)*/
 
     /*δείκτης στο dataset*/
     const std::vector<std::vector<float>> *data_ptr_ = nullptr;
 
+    /*για κάθε προβολή i, αντιστοιχίζουμε κάθε ακέραιο h_i σε bit ∈ {0,1}, ώστε να παραμένει σταθερό μεταξύ build/query.*/
+    std::vector<std::unordered_map<long long, int>> bit_maps_;
+
     /*υπολογισμός των k' ακέραιων τιμών h_i(p) για ένα διάνυσμα p*/
     std::vector<long long> compute_hashes(const std::vector<float> &p) const;
+
+    /*επιστροφή bit για συγκεκριμένη προβολή i και ακέραιο h (δημιουργεί αν δεν υπάρχει)*/
+    int bit_for(int proj_id, long long hval) const;
+
+    /*συσκευασία των k' bits σε ταυτότητα κορυφής (vertex id) 64-bit*/
+    std::uint64_t compute_vertex_id(const std::vector<long long> &hashes) const;
   };
 
 } /*namespace nn*/
