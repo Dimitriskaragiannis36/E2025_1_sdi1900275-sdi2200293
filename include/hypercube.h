@@ -8,7 +8,9 @@
 
 namespace nn
 {
-  /*A2*/
+
+  /*Α2*/
+  /*προσθήκη συνάρτησης κατακερματισμού h_i(p) = floor((v_i·p + t_i)/w).*/
   class Hypercube
   {
   public:
@@ -20,41 +22,41 @@ namespace nn
               unsigned int seed = 1,
               utils::DistanceFunc dist_func = utils::euclidean_distance);
 
-    /*κατασκευή ευρετηρίου πάνω στο dataset*/
+    /*δημιουργία δείκτη πάνω στο dataset*/
     void build_index(const std::vector<std::vector<float>> &data);
 
-    /*k-NN (top-N)*/
+    /*k-NN (επιστρέφει ζεύγη (index, απόσταση))*/
     std::vector<std::pair<int, float>> knn_query(const std::vector<float> &q, int N) const;
 
-    /*range (ακτίνα R)*/
+    /*ακτίνα (επιστρέφει indices)*/
     std::vector<int> range_search(const std::vector<float> &q, float R) const;
 
-    /*απελευθέρωση πόρων*/
+    /*καθαρισμός πόρων*/
     void clear_index();
 
   private:
-    /*RNG και προβολές*/
-    int dim_;
-    int kproj_;
-    int w_;
+    int dim_;   /*διαστατικότητα πρωτογενούς χώρου*/
+    int kproj_; /*αριθμός προβολών (k')*/
+    int w_;     /*παράμετρος πλάτους κουβάδων*/
     int M_;
     int probes_;
-    unsigned int seed_;
-    utils::DistanceFunc dist_func_;
+    unsigned int seed_;             /*σπόρος RNG*/
+    utils::DistanceFunc dist_func_; /*μετρική απόστασης*/
 
-    /*RNG & κατανομές*/
+    /*τυχαιοποιητής & κατανομές*/
     std::mt19937 rng_;
-    std::normal_distribution<float> normal_;
-    std::uniform_real_distribution<float> uni_;
+    std::normal_distribution<float> normal_;    /*για v ~ N(0,1)*/
+    std::uniform_real_distribution<float> uni_; /*για t ~ U(0,w)*/
 
-    /*τυχαίες προβολές και μετατοπίσεις*/
-    /*v_[i] έχει μήκος dim_, κληρώνεται ~ N(0,1)*/
-    std::vector<std::vector<float>> v_;
-    /*t_[i] κληρώνεται ~ Uniform(0, w)*/
-    std::vector<float> t_;
+    /*προβολές και μετατοπίσεις*/
+    std::vector<std::vector<float>> v_; /*v_[i].size()==dim_*/
+    std::vector<float> t_;              /* t_[i] ∈ [0, w) */
 
-    /*δείκτης στο dataset (ορίζεται στο build_index;)*/
+    /*δείκτης στο dataset*/
     const std::vector<std::vector<float>> *data_ptr_ = nullptr;
+
+    /*υπολογισμός των k' ακέραιων τιμών h_i(p) για ένα διάνυσμα p*/
+    std::vector<long long> compute_hashes(const std::vector<float> &p) const;
   };
 
 } /*namespace nn*/

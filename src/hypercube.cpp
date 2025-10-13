@@ -1,10 +1,11 @@
 #include "hypercube.h"
 #include <iostream>
+#include <cmath> // floor
 
 namespace nn
 {
 
-    /*αρχικοποίηση RNG, δημιουργία Gaussian προβολών v_ και uniform μετατοπίσεων t_*/
+    /*προσθήκη υπολογισμού h_i(p) = floor((v_i·p + t_i)/w)*/
     Hypercube::Hypercube(int dim,
                          int kproj,
                          int w,
@@ -26,7 +27,7 @@ namespace nn
           t_(kproj_, 0.0f),
           data_ptr_(nullptr)
     {
-        /*γεμίζω v_ με N(0,1) και t_ με U(0, w)*/
+        /*γέμισμα προβολών v_ με N(0,1) και μετατοπίσεων t_ με U(0,w)*/
         for (int i = 0; i < kproj_; ++i)
         {
             for (int d = 0; d < dim_; ++d)
@@ -36,20 +37,41 @@ namespace nn
             t_[i] = uni_(rng_);
         }
 
-        std::cout << "Hypercube ctor (commit 3): "
+        std::cout << "Hypercube ctor (commit 4): "
                   << "dim=" << dim_
                   << " kproj=" << kproj_
                   << " w=" << w_
                   << " M=" << M_
                   << " probes=" << probes_
                   << " seed=" << seed_
-                  << " [προβολές & μετατοπίσεις αρχικοποιήθηκαν]\n";
+                  << " [projections & shifts ready, hashes enabled]\n";
     }
 
+    /*σύνδεση dataset*/
     void Hypercube::build_index(const std::vector<std::vector<float>> &data)
     {
         data_ptr_ = &data;
-        std::cout << "[Hypercube] build_index():\n";
+        std::cout << "[Hypercube] build_index(): dataset attached (commit 4)\n";
+    }
+
+    /*υπολογισμός των k' ακέραιων hash τιμών για διάνυσμα p*/
+    /*h_i(p) = floor( (v_i · p + t_i) / w )*/
+    std::vector<long long> Hypercube::compute_hashes(const std::vector<float> &p) const
+    {
+        std::vector<long long> h(kproj_);
+        for (int i = 0; i < kproj_; ++i)
+        {
+            double dot = 0.0;
+            /*υπολογισμός εσωτερικού γινομένου v_i · p*/
+            for (int d = 0; d < dim_; ++d)
+            {
+                dot += static_cast<double>(v_[i][d]) * static_cast<double>(p[d]);
+            }
+            /*εφαρμογή μετατόπισης και κανονικοποίηση με w*/
+            const double val = (dot + static_cast<double>(t_[i])) / static_cast<double>(w_);
+            h[i] = static_cast<long long>(std::floor(val));
+        }
+        return h;
     }
 
     std::vector<std::pair<int, float>> Hypercube::knn_query(const std::vector<float> &, int) const
