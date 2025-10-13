@@ -11,8 +11,8 @@
 namespace nn
 {
 
-  /*Α2*/
-  /*προσθήκη συνεπούς απεικόνισης hash -> bit και υπολογισμού ταυτότητας κορυφής (vertex id)*/
+  /*A2*/
+  /*προσθήκη ανίχνευσης κορυφών: παραγωγή λίστας κορυφών προς έλεγχο με αύξουσα απόσταση Hamming (BFS σε γειτονιά Hamming-1)*/
   class Hypercube
   {
   public:
@@ -41,11 +41,11 @@ namespace nn
     int kproj_; /*αριθμός προβολών (k')*/
     int w_;     /*παράμετρος πλάτους κουβάδων*/
     int M_;
-    int probes_;
+    int probes_;                    /*μέγιστος αριθμός κορυφών για ανίχνευση*/
     unsigned int seed_;             /*σπόρος RNG*/
     utils::DistanceFunc dist_func_; /*μετρική απόστασης*/
 
-    /*τυχαίος αριθμός & κατανομές*/
+    /*τυχαιοποιητής & κατανομές*/
     std::mt19937 rng_;
     std::normal_distribution<float> normal_;    /*για v ~ N(0,1)*/
     std::uniform_real_distribution<float> uni_; /*για t ~ U(0,w)*/
@@ -57,17 +57,21 @@ namespace nn
     /*δείκτης στο dataset*/
     const std::vector<std::vector<float>> *data_ptr_ = nullptr;
 
-    /*για κάθε προβολή i, αντιστοιχίζουμε κάθε ακέραιο h_i σε bit ∈ {0,1}, ώστε να παραμένει σταθερό μεταξύ build/query.*/
+    /*απεικόνιση hash -> bit ανά προβολή*/
     std::vector<std::unordered_map<long long, int>> bit_maps_;
 
+    /*βοηθητικές συναρτήσεις*/
     /*υπολογισμός των k' ακέραιων τιμών h_i(p) για ένα διάνυσμα p*/
     std::vector<long long> compute_hashes(const std::vector<float> &p) const;
 
-    /*επιστροφή bit για συγκεκριμένη προβολή i και ακέραιο h (δημιουργεί αν δεν υπάρχει)*/
+    /*επιστροφή bit για (proj_id, hval) με συνεπή, ντετερμινιστική ανάθεση*/
     int bit_for(int proj_id, long long hval) const;
 
-    /*συσκευασία των k' bits σε ταυτότητα κορυφής (vertex id) 64-bit*/
+    /*συσκευασία των k' bits σε 64-bit ταυτότητα κορυφής*/
     std::uint64_t compute_vertex_id(const std::vector<long long> &hashes) const;
+
+    /*παραγωγή έως 'probes_' κορυφές ξεκινώντας από base, με αύξουσα Hamming απόσταση*/
+    std::vector<std::uint64_t> vertices_to_probe(std::uint64_t base) const;
   };
 
 } /*namespace nn*/
