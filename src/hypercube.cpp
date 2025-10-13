@@ -1,9 +1,9 @@
 #include "hypercube.h"
 #include <iostream>
-#include <cmath>         // floor
-#include <algorithm>     // (μελλοντικά για nth_element/sort)
-#include <queue>         // BFS
-#include <unordered_set> // αποφυγή διπλοεπίσκεψης
+#include <cmath>
+#include <algorithm>
+#include <queue>
+#include <unordered_set>
 
 namespace nn
 {
