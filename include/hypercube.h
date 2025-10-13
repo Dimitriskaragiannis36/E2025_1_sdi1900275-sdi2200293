@@ -23,16 +23,28 @@ namespace nn
     /*κατασκευή ευρετηρίου πάνω στο dataset*/
     void build_index(const std::vector<std::vector<float>> &data);
 
-    /*k-NN(top-N)*/
+    /*k-NN (top-N)*/
     std::vector<std::pair<int, float>> knn_query(const std::vector<float> &q, int N) const;
 
-    /*range(ακτίνα R)*/
+    /*range (ακτίνα R)*/
     std::vector<int> range_search(const std::vector<float> &q, float R) const;
 
-    /*απελευθέρωση πόρων (no-op)*/
+    /*απελευθέρωση πόρων*/
     void clear_index();
+
+  private:
+    int dim_;
+    int kproj_;
+    int w_;
+    int M_;
+    int probes_;
+    unsigned int seed_;
+    utils::DistanceFunc dist_func_;
+
+    /*δείκτης στο dataset (ορίζεται στο build_index;)*/
+    const std::vector<std::vector<float>> *data_ptr_ = nullptr;
   };
 
 } /*namespace nn*/
 
-#endif // HYPERCUBE_H
+#endif /*HYPERCUBE_H*/
