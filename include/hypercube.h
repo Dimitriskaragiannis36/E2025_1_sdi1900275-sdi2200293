@@ -12,7 +12,7 @@ namespace nn
 {
 
   /*A2*/
-  /*προσθήκη δομής κάδων (cube_) και πλήρους υλοποίησης του build_index()*/
+  // Υλοποίηση k-NN (με όριο υποψηφίων M_ και probing έως probes_ κορυφές).
   class Hypercube
   {
   public:
@@ -40,7 +40,7 @@ namespace nn
     int dim_;                       /*διαστατικότητα πρωτογενούς χώρου*/
     int kproj_;                     /*αριθμός προβολών (k')*/
     int w_;                         /*παράμετρος πλάτους κουβάδων*/
-    int M_;                         /*ανώτατο πλήθος υποψηφίων*/
+    int M_;                         /*ανώτατο πλήθος υποψηφίων που θα εξεταστούν*/
     int probes_;                    /*μέγιστος αριθμός κορυφών για ανίχνευση*/
     unsigned int seed_;             /*σπόρος RNG*/
     utils::DistanceFunc dist_func_; /*μετρική απόστασης*/
@@ -60,7 +60,7 @@ namespace nn
     /*απεικόνιση hash -> bit ανά προβολή*/
     std::vector<std::unordered_map<long long, int>> bit_maps_;
 
-    /*κάδοι hypercube: vertex id -> λίστα indices σημείων που ανήκουν στην κορυφή*/
+    /*κάδοι hypercube: vertex id -> λίστα indices σημείων*/
     std::unordered_map<std::uint64_t, std::vector<int>> cube_;
 
     /*--- Βοηθητικές συναρτήσεις ---*/

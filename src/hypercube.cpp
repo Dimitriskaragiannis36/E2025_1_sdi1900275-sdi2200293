@@ -8,7 +8,7 @@
 namespace nn
 {
 
-    /*build_index() γεμίζει το cube_ με βάση τα vertex ids*/
+    /*υλοποίηση k-NN με M_ υποψηφίους και probing έως probes_ κορυφές*/
     Hypercube::Hypercube(int dim,
                          int kproj,
                          int w,
@@ -41,25 +41,23 @@ namespace nn
             t_[i] = uni_(rng_);
         }
 
-        std::cout << "Hypercube ctor (commit 7): "
+        std::cout << "Hypercube ctor (commit 8): "
                   << "dim=" << dim_
                   << " kproj=" << kproj_
                   << " w=" << w_
                   << " M=" << M_
                   << " probes=" << probes_
                   << " seed=" << seed_
-                  << " [cube buckets ready]\n";
+                  << " [k-NN ready]\n";
     }
 
-    /*δημιουργία του δείκτη: υπολογίζει για κάθε σημείο το vertex id και τοποθετεί το index στον αντίστοιχο κάδο.*/
+    /*δημιουργία δείκτη: υπολογίζει για κάθε σημείο το vertex id και τοποθετεί το index στον αντίστοιχο κάδο*/
     void Hypercube::build_index(const std::vector<std::vector<float>> &data)
     {
         data_ptr_ = &data;
 
-        /*καθαρισμός προηγούμενης κατάστασης*/
         cube_.clear();
 
-        /*για κάθε σημείο: hashes -> bits -> vertex id -> push index στον κάδο*/
         const int n = static_cast<int>(data.size());
         for (int idx = 0; idx < n; ++idx)
         {
@@ -75,8 +73,9 @@ namespace nn
     }
 
     /*υπολογισμός των k' ακέραιων hash τιμών για διάνυσμα p*/
-    // h_i(p) = floor( (v_i · p + t_i) / w )
-    std::vector<long long> Hypercube::compute_hashes(const std::vector<float> &p) const
+    /*h_i(p) = floor( (v_i · p + t_i) / w )*/
+    std::vector<long long>
+    Hypercube::compute_hashes(const std::vector<float> &p) const
     {
         std::vector<long long> h(kproj_);
         for (int i = 0; i < kproj_; ++i)
@@ -92,7 +91,7 @@ namespace nn
         return h;
     }
 
-    /*επιστρέφει bit ∈ {0,1} για (proj_id, hval) μεντετερμινιστική ανάθεση.*/
+    /*επιστρέφει bit ∈ {0,1} για (proj_id, hval) με ντετερμινιστική ανάθεση*/
     int Hypercube::bit_for(int proj_id, long long hval) const
     {
         auto &mp = const_cast<std::unordered_map<long long, int> &>(bit_maps_[proj_id]);
@@ -112,8 +111,8 @@ namespace nn
         return bit;
     }
 
-    /*συσκευάζει τα k' bits σε 64-bit αναγνωριστικό κορυφής*/
-    /*bit i -> θέση i στο αποτέλεσμα. Υπόθεση: kproj_ ≤ 64.*/
+    /*συσκευάζει τα k' bits σε 64-bit αναγνωριστικό κορυφής.
+    bit i -> θέση i στο αποτέλεσμα. Υπόθεση: kproj_ ≤ 64*/
     std::uint64_t Hypercube::compute_vertex_id(const std::vector<long long> &hashes) const
     {
         std::uint64_t bits = 0ULL;
@@ -168,9 +167,66 @@ namespace nn
         return out;
     }
 
-    std::vector<std::pair<int, float>> Hypercube::knn_query(const std::vector<float> &, int) const
+    /*k-NN: ανιχνεύει έως 'probes_' κορυφές γύρω από τη βάση του ερωτήματος,
+    συλλέγει έως M_ υποψηφίους από τα αντίστοιχα buckets, υπολογίζει αποστάσεις
+    και επιστρέφει τους N καλύτερους (index, απόσταση) κατά αύξουσα απόσταση*/
+    std::vector<std::pair<int, float>> Hypercube::knn_query(const std::vector<float> &q, int N) const
     {
-        return {};
+        std::vector<std::pair<int, float>> out;
+
+        /*έλεγχοι ασφαλείας*/
+        if (!data_ptr_ || data_ptr_->empty() || N <= 0)
+            return out;
+
+        /*εύρεση κορυφή βάσης*/
+        const auto hq = compute_hashes(q);
+        const auto vq = compute_vertex_id(hq);
+        const auto list = vertices_to_probe(vq);
+
+        /*συλλογή υποψηφίων έως M_*/
+        std::vector<std::pair<float, int>> cand; /*(distance, index)*/
+        cand.reserve(std::min(M_, static_cast<int>(data_ptr_->size())));
+
+        int examined = 0;
+        for (std::uint64_t vtx : list)
+        {
+            auto it = cube_.find(vtx);
+            if (it == cube_.end())
+                continue;
+            for (int idx : it->second)
+            {
+                /*υπολογισμός απόστασης ως προς q*/
+                float d = dist_func_(q, (*data_ptr_)[idx]);
+                cand.emplace_back(d, idx);
+                ++examined;
+                if (examined >= M_)
+                    break;
+            }
+            if (examined >= M_)
+                break;
+        }
+
+        if (cand.empty())
+            return out;
+
+        /*επιλογή κορυφαίων N (partial sort για αποδοτικότητα)*/
+        const int take = std::min(N, static_cast<int>(cand.size()));
+        if (static_cast<int>(cand.size()) > take)
+        {
+            std::nth_element(cand.begin(), cand.begin() + take, cand.end(),
+                             [](const auto &a, const auto &b)
+                             { return a.first < b.first; });
+            cand.resize(take);
+        }
+        std::sort(cand.begin(), cand.end(),
+                  [](const auto &a, const auto &b)
+                  { return a.first < b.first; });
+
+        /*μετατροπή σε (index, απόσταση)*/
+        out.reserve(cand.size());
+        for (const auto &p : cand)
+            out.emplace_back(p.second, p.first);
+        return out;
     }
 
     std::vector<int> Hypercube::range_search(const std::vector<float> &, float) const
@@ -180,10 +236,9 @@ namespace nn
 
     void Hypercube::clear_index()
     {
-        /*καθαρισμός μόνο της δομής κάδων και αποσύνδεση dataset*/
         cube_.clear();
         data_ptr_ = nullptr;
-        std::cout << "[Hypercube] clear_index(): cube cleared (commit 7)\n";
+        std::cout << "[Hypercube] clear_index(): cube cleared (commit 8)\n";
     }
 
 } /*namespace nn*/
