@@ -12,7 +12,7 @@ namespace nn
 {
 
   /*A2*/
-  // Υλοποίηση k-NN (με όριο υποψηφίων M_ και probing έως probes_ κορυφές).
+  /*προσθήκη range_search(): χρήση probing και ορίου M_ για συλλογή υποψηφίων εντός ακτίνας*/
   class Hypercube
   {
   public:
@@ -30,7 +30,7 @@ namespace nn
     /*k-NN (επιστρέφει ζεύγη (index, απόσταση))*/
     std::vector<std::pair<int, float>> knn_query(const std::vector<float> &q, int N) const;
 
-    /*ακτίνα (επιστρέφει indices)*/
+    /*ακτίνα (επιστρέφει indices σημείων με απόσταση ≤ R)*/
     std::vector<int> range_search(const std::vector<float> &q, float R) const;
 
     /*καθαρισμός πόρων*/
@@ -60,7 +60,7 @@ namespace nn
     /*απεικόνιση hash -> bit ανά προβολή*/
     std::vector<std::unordered_map<long long, int>> bit_maps_;
 
-    /*κάδοι hypercube: vertex id -> λίστα indices σημείων*/
+    // Κάδοι hypercube: vertex id → λίστα indices σημείων
     std::unordered_map<std::uint64_t, std::vector<int>> cube_;
 
     /*--- Βοηθητικές συναρτήσεις ---*/
