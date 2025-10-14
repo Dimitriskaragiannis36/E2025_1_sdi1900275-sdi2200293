@@ -1,24 +1,46 @@
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -O2 -Iinclude
+CXX      := g++
+CXXFLAGS := -std=gnu++17 -O3 -Wall -Wextra -Wpedantic
+LDFLAGS  := 
 
-TARGET = bin/search
-SRCS = $(wildcard src/*.cpp)
-OBJS = $(patsubst src/%.cpp, build/%.o, $(SRCS))
+TARGET := search
 
-.PHONY: all clean run
+SOURCES := \
+	main.cpp \
+	helper.cpp \
+	mnist.cpp \
+	kmeans.cpp \
+	lsh.cpp \
+	ivff.cpp \
+	silhouette.cpp \
+	hypercube.cpp
+
+OBJECTS := $(SOURCES:.cpp=.o)
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
-	@mkdir -p bin
-	$(CXX) $(CXXFLAGS) -o $@ $^
+$(TARGET): $(OBJECTS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-build/%.o: src/%.cpp
-	@mkdir -p build
+%.o: %.cpp \
+	helper.h \
+	mnist.h \
+	kmeans.h \
+	lsh.h \
+	ivff.h \
+	silhouette.h \
+	hypercube.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-run: $(TARGET)
-	./$(TARGET)
-
+.PHONY: clean distclean
 clean:
-	rm -rf build bin
+	@echo "→ Καθαρισμός αντικειμένων..."
+	@rm -f $(OBJECTS)
+
+distclean: clean
+	@echo "→ Καθαρισμός εκτελέσιμου..."
+	@rm -f $(TARGET)
+
+.PHONY: run
+run: all
+	@echo "→ Εκτέλεση: ./$(TARGET)"
+	@./$(TARGET)
