@@ -3,60 +3,66 @@
 
 #include <vector>
 #include <string>
+#include <fstream>
 #include <functional>
-#include <unordered_set>
-#include <iostream>
 #include <cmath>
+#include <unordered_set>
 
 namespace utils
 {
+    /*τύπος για συνάρτηση απόστασης*/
+    using DistanceFunc = std::function<float(const std::vector<float> &, const std::vector<float> &)>;
 
-    /*Συνάρτηση απόστασης (τύπος)*/
-    using DistanceFunc = std::function<float(const std::vector<float> &,
-                                             const std::vector<float> &)>;
-
-    /*Δομή παραμέτρων προγράμματος (CLI)*/
-    /*προσθήκη τα flags του Hypercube*/
-    /*-hypercube -kproj -M -probes (-w επαναχρησιμοποιείται)*/
+    /*παράμετροι από γραμμή εντολών (και default τιμές) για ασφάλεια*/
     struct Params
     {
-        /*γενικά αρχεία / επιλογές*/
-        std::string input_file;
-        std::string query_file;
-        std::string output_file;
-        std::string data_type = "mnist";
+        /*κοινές παράμετροι*/
+        int seed = 1;
+        int N = 1;
+        float R = 2000.0f;
+        std::string input_file = "data/input.dat";
+        std::string query_file = "data/query.dat";
+        std::string output_file = "results.txt";
+        std::string type = "mnist";
+        bool do_range = true;
 
-        int N = 1;             /*-N: #γειτόνων για k-NN*/
-        float R = 2000.0f;     /*-R: ακτίνα για range search*/
-        bool do_range = true;  /*-range true|false*/
-        unsigned int seed = 1; /*-seed*/
+        // LSH
+        int k = 4;
+        int L = 5;
+        int w = 4;
+        bool use_lsh = false;
 
-        /*LSH (A1)*/
-        bool use_lsh = false; /*-lsh*/
-        int k = 4;            /*-k  (LSH concatenations)*/
-        int L = 5;            /*-L  (LSH tables)*/
-        int w = 4;            /*-w  (LSH / Hypercube πλάτος bucket)*/
+        /*Hypercube*/
+        bool use_hypercube = false; /*ενεργοποίηση αλγορίθμου Hypercube*/
+        int kproj = 14;             /*διάσταση της τυχαίας προβολής (d')*/
+        int max_candidates = 10;    /*μέγιστος αριθμός υποψήφιων σημείων (M)*/
+        int max_probes = 2;         /*μέγιστος αριθμός κορυφών (probes)*/
 
-        /*Hypercube (A2)*/
-        bool use_hypercube = false; /*-hypercube*/
-        int kproj = 14;             /*-kproj: #τυχαίες προβολές (k')*/
-        int M_cap = 10;             /*-M: όριο υποψηφίων*/
-        int probes = 2;             /*-probes: #κορυφών για probing*/
-
-        /*IVFFlat (A3)*/
-        bool use_ivfflat = false; /*-ivfflat*/
-        int kclusters = 32;       /*-kclusters*/
-        int nprobe = 1;           /*-nprobe*/
+        /*IVFFlat*/
+        bool use_ivfflat = false;
+        int kclusters = 50; /*αριθμός συστάδων (nlist)*/
+        int nprobe = 5;     /*αριθμός clusters που εξετάζονται κατά την αναζήτηση*/
     };
 
-    /*δηλώσεις συναρτήσεων βοηθητικών*/
+    /*ανάλυση παραμέτρων από γραμμή εντολών*/
     Params parse_args(int argc, char *argv[]);
+
+    /*εκτύπωση παραμέτρων*/
     void print_params(const Params &p);
 
-    /*ευκλείδεια απόσταση*/
-    float euclidean_distance(const std::vector<float> &x,
-                             const std::vector<float> &y);
+    /*template-based run_queries (λειτουργεί για LSH, Hypercube, IVF κ.λπ.)*/
+    template <typename IndexType>
+    void run_queries(IndexType &index,
+                     const std::vector<std::vector<float>> &data,
+                     const std::vector<std::vector<float>> &queries,
+                     const Params &params,
+                     std::ofstream &out);
+
+    /*απλή ευκλείδεια απόσταση*/
+    float euclidean_distance(const std::vector<float> &x, const std::vector<float> &y);
 
 } /*namespace utils*/
+
+#include "helper.tpp" /*θα βάλουμε εδώ το template body*/
 
 #endif /*HELPER_H*/
