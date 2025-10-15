@@ -2,81 +2,78 @@
 #define HYPERCUBE_H
 
 #include "helper.h"
-#include <vector>
-#include <utility>
-#include <random>
 #include <unordered_map>
+#include <vector>
+#include <random>
+#include <cmath>
 #include <cstdint>
 
-namespace nn
+namespace hcube
 {
 
-  /*A2*/
-  /*προσθήκη range_search(): χρήση probing και ορίου M_ για συλλογή υποψηφίων εντός ακτίνας*/
+  /*Hypercube*/
+  /*Περιγραφή:
+      Υλοποιεί τον αλγόριθμο Approximate Nearest Neighbor
+      χρησιμοποιώντας δομή Random Projection Hypercube.
+      Κάθε σημείο προβάλλεται σε k' (dprime) τυχαίες διαστάσεις
+      και αντιστοιχίζεται σε μία κορυφή του δυαδικού κύβου (vertex).*/
   class Hypercube
   {
   public:
-    Hypercube(int dim,
-              int kproj = 14,
-              int w = 4,
-              int M = 10,
-              int probes = 2,
-              unsigned int seed = 1,
-              utils::DistanceFunc dist_func = utils::euclidean_distance);
+    Hypercube(int dim, int dprime, int w, int max_candidates, int max_probes,
+              unsigned int seed, utils::DistanceFunc dist_func);
 
-    /*δημιουργία δείκτη πάνω στο dataset (κατανομή σε κορυφές του hypercube)*/
+    /*Δημιουργία του δείκτη (ευρετηρίου):
+      - Υπολογίζει για κάθε σημείο το vertex id
+      - Αποθηκεύει το index του σημείου στον κατάλληλο κάδο (vertex_buckets_)*/
     void build_index(const std::vector<std::vector<float>> &data);
 
-    /*k-NN (επιστρέφει ζεύγη (index, απόσταση))*/
-    std::vector<std::pair<int, float>> knn_query(const std::vector<float> &q, int N) const;
-
-    /*ακτίνα (επιστρέφει indices σημείων με απόσταση ≤ R)*/
-    std::vector<int> range_search(const std::vector<float> &q, float R) const;
-
-    /*καθαρισμός πόρων*/
+    /*διαγραφή όλων των κάδων/προβολών*/
     void clear_index();
 
+    /*k-Nearest Neighbors:επιστρέφει N κοντινότερους γείτονες (index, απόσταση)*/
+    std::vector<std::pair<int, float>> knn_query(const std::vector<float> &q, int N) const;
+
+    /*range search:επιστρέφει όλα τα σημεία εντός ακτίνας R*/
+    std::vector<int> range_search(const std::vector<float> &q, float R) const;
+
+    /*πιστρέφει όλους τους υποψηφίους γείτονες που ανήκουν στις κοντινές κορυφές (ανάλογα με το Hamming distance)*/
+    std::vector<int> query_candidates(const std::vector<float> &q) const;
+
+    /*πρόσβαση στα δεδομένα και στη συνάρτηση απόστασης*/
+    const std::vector<std::vector<float>> &data() const { return *data_ptr_; }
+    utils::DistanceFunc distance_func() const { return dist_func_; }
+
   private:
-    int dim_;                       /*διαστατικότητα πρωτογενούς χώρου*/
-    int kproj_;                     /*αριθμός προβολών (k')*/
-    int w_;                         /*παράμετρος πλάτους κουβάδων*/
-    int M_;                         /*ανώτατο πλήθος υποψηφίων που θα εξεταστούν*/
-    int probes_;                    /*μέγιστος αριθμός κορυφών για ανίχνευση*/
+    int dim_;                       /*αρχική διαστατικότητα*/
+    int dprime_;                    /*αριθμός προβολών (bits του hypercube)*/
+    int w_;                         /*πλάτος bucket (hash width)*/
+    int max_candidates_;            /*μέγιστος αριθμός υποψηφίων σημείων*/
+    int max_probes_;                /*μέγιστος αριθμός κορυφών για probing*/
     unsigned int seed_;             /*σπόρος RNG*/
-    utils::DistanceFunc dist_func_; /*μετρική απόστασης*/
+    utils::DistanceFunc dist_func_; /*συνάρτηση απόστασης (π.χ. L2)*/
 
-    /*τυχαιοποιητής & κατανομές*/
-    std::mt19937 rng_;
-    std::normal_distribution<float> normal_;    /*για v ~ N(0,1)*/
-    std::uniform_real_distribution<float> uni_; /*για t ~ U(0,w)*/
-
-    /*προβολές και μετατοπίσεις*/
-    std::vector<std::vector<float>> v_; /*v_[i].size()==dim_*/
-    std::vector<float> t_;              /*t_[i] ∈ [0, w)*/
-
-    /*δείκτης στο dataset*/
+    /*δεδομένα του dataset*/
     const std::vector<std::vector<float>> *data_ptr_ = nullptr;
 
-    /*απεικόνιση hash -> bit ανά προβολή*/
-    std::vector<std::unordered_map<long long, int>> bit_maps_;
+    /*Τυχαίες προβολές τύπου LSH:
+      - v_ -> k' διανύσματα προβολής (Gaussian)
+      - t_ -> μετατοπίσεις (Uniform[0, w))
+      - bit_map_ -> αντιστοίχιση ακέραιου hash -> bit {0,1}*/
+    std::vector<std::vector<float>> v_;
+    std::vector<float> t_;
+    mutable std::vector<std::unordered_map<long long, uint8_t>> bit_map_;
 
-    // Κάδοι hypercube: vertex id → λίστα indices σημείων
-    std::unordered_map<std::uint64_t, std::vector<int>> cube_;
+    /*vertex_buckets_: κάθε vertex (64-bit id) δείχνει σε λίστα σημείων (indices)*/
+    std::unordered_map<uint64_t, std::vector<int>> vertex_buckets_;
 
-    /*--- Βοηθητικές συναρτήσεις ---*/
-    /*υπολογισμός των k' ακέραιων τιμών h_i(p) για ένα διάνυσμα p*/
-    std::vector<long long> compute_hashes(const std::vector<float> &p) const;
-
-    /*επιστροφή bit για (proj_id, hval) με ντετερμινιστική ανάθεση*/
-    int bit_for(int proj_id, long long hval) const;
-
-    /*συσκευασία των k' bits σε 64-bit ταυτότητα κορυφής*/
-    std::uint64_t compute_vertex_id(const std::vector<long long> &hashes) const;
-
-    /*παραγωγή έως 'probes_' κορυφές ξεκινώντας από base, με αύξουσα Hamming απόσταση*/
-    std::vector<std::uint64_t> vertices_to_probe(std::uint64_t base) const;
+    /*Εσωτερικές βοηθητικές συναρτήσεις:
+        - point_to_vertex(p) -> υπολογίζει σε ποια κορυφή ανήκει το p
+        - collect_neighbors_by_hamming(v, out) -> συλλέγει υποψηφίους από κοντινές κορυφές (με αύξουσα απόσταση Hamming)*/
+    uint64_t point_to_vertex(const std::vector<float> &p) const;
+    void collect_neighbors_by_hamming(uint64_t vertex, std::vector<int> &out_candidates) const;
   };
 
-} /*namespace nn*/
+} /*namespace hcube*/
 
 #endif /*HYPERCUBE_H*/

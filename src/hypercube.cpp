@@ -1,261 +1,191 @@
 #include "hypercube.h"
-#include <iostream>
-#include <cmath>
 #include <algorithm>
-#include <queue>
+#include <bitset>
+#include <random>
 #include <unordered_set>
+#include <queue>
+#include <iostream>
 
-namespace nn
+namespace hcube
 {
 
-    Hypercube::Hypercube(int dim,
-                         int kproj,
-                         int w,
-                         int M,
-                         int probes,
-                         unsigned int seed,
-                         utils::DistanceFunc dist_func)
+    /*αποθηκεύει τις βασικές παραμέτρους (διαστάσεις, seed, μέγιστα κτλ.)*/
+    Hypercube::Hypercube(int dim, int dprime, int w, int max_candidates, int max_probes,
+                         unsigned int seed, utils::DistanceFunc dist_func)
         : dim_(dim),
-          kproj_(kproj),
+          dprime_(dprime),
           w_(w),
-          M_(M),
-          probes_(probes),
+          max_candidates_(max_candidates),
+          max_probes_(max_probes),
           seed_(seed),
-          dist_func_(dist_func ? dist_func : utils::euclidean_distance),
-          rng_(seed_),
-          normal_(0.0f, 1.0f),
-          uni_(0.0f, static_cast<float>(w)),
-          v_(kproj_, std::vector<float>(dim_, 0.0f)),
-          t_(kproj_, 0.0f),
-          data_ptr_(nullptr),
-          bit_maps_(kproj_)
+          dist_func_(dist_func) {}
+
+    /*Αντιστοιχίζει την τιμή h_i(p) -> bit {0,1} και δημιουργεί/ενημερώνει τη bit_map_ για συνεπή ανάθεση. Επιστρέφει τον 64-bit δείκτη κορυφής (vertex id).*/
+    uint64_t Hypercube::point_to_vertex(const std::vector<float> &p) const
     {
-        /*δημιουργία των προβολών v_ και των μετατοπίσεων t_*/
-        for (int i = 0; i < kproj_; ++i)
+        uint64_t vertex = 0;
+
+        for (int i = 0; i < dprime_; ++i)
         {
-            for (int d = 0; d < dim_; ++d)
-                v_[i][d] = normal_(rng_);
-            t_[i] = uni_(rng_);
+            float dot = 0.0f;
+            /*υπολογισμός εσωτερικού γινομένου v_i · p*/
+            for (int j = 0; j < dim_; ++j)
+                dot += v_[i][j] * p[j];
+
+            /*υπολογισμός του h_i(p) = floor((v_i·p + t_i)/w)*/
+            long long h = static_cast<long long>(std::floor((dot + t_[i]) / w_));
+
+            /*αν η τιμή h έχει ξαναεμφανιστεί, χρησιμοποιεί το αποθηκευμένο bit*/
+            auto it = bit_map_[i].find(h);
+            uint8_t bit;
+            if (it != bit_map_[i].end())
+            {
+                bit = it->second;
+            }
+            else
+            {
+                /*δημιουργία ντετερμινιστικού bit {0,1} με χρήση hash + seed ώστε να είναι επαναλήψιμο*/
+                std::mt19937 gen(seed_ ^ (i * 1315423911u) ^ (std::hash<long long>{}(h)));
+                bit = gen() % 2;
+                bit_map_[i][h] = bit;
+            }
+
+            // Προσθήκη του bit στη δυαδική αναπαράσταση του vertex id
+            vertex |= (static_cast<uint64_t>(bit) << i);
         }
 
-        std::cout << "[Hypercube] Initialized:"
-                  << " dim=" << dim_
-                  << " kproj=" << kproj_
-                  << " w=" << w_
-                  << " M=" << M_
-                  << " probes=" << probes_
-                  << " seed=" << seed_
-                  << std::endl;
+        return vertex;
     }
 
-    /*δημιουργία του δείκτη (build)*/
+    /*Δημιουργία του ευρετηρίου:
+      - Δημιουργεί τυχαίες προβολές (v_, t_)
+      - Υπολογίζει για κάθε σημείο σε ποια κορυφή (vertex) ανήκει
+      - Αποθηκεύει το index του σημείου στον αντίστοιχο κάδο*/
     void Hypercube::build_index(const std::vector<std::vector<float>> &data)
     {
         data_ptr_ = &data;
-        cube_.clear();
 
-        const int n = static_cast<int>(data.size());
-        for (int idx = 0; idx < n; ++idx)
+        std::mt19937 gen(seed_);
+        std::normal_distribution<float> normal(0.0f, 1.0f);
+        std::uniform_real_distribution<float> uniform(0.0f, w_);
+
+        /*δημιουργία τυχαίων διανυσμάτων προβολής και μετατοπίσεων*/
+        v_.assign(dprime_, std::vector<float>(dim_));
+        t_.assign(dprime_, 0.0f);
+        bit_map_.assign(dprime_, {});
+
+        for (int i = 0; i < dprime_; ++i)
         {
-            const auto h = compute_hashes(data[idx]);
-            const std::uint64_t vtx = compute_vertex_id(h);
-            cube_[vtx].push_back(idx);
+            for (int j = 0; j < dim_; ++j)
+                v_[i][j] = normal(gen);
+            t_[i] = uniform(gen);
         }
 
-        std::cout << "[Hypercube] build_index(): "
-                  << "Inserted " << n << " points into "
-                  << cube_.size() << " non-empty vertices.\n";
-    }
+        /*καθαρισμός προηγούμενων κάδων*/
+        vertex_buckets_.clear();
 
-    /*υπολογισμός hash τιμών*/
-    std::vector<long long> Hypercube::compute_hashes(const std::vector<float> &p) const
-    {
-        std::vector<long long> h(kproj_);
-        for (int i = 0; i < kproj_; ++i)
+        /*αντιστοίχιση κάθε σημείου σε κορυφή*/
+        for (int idx = 0; idx < (int)data.size(); ++idx)
         {
-            double dot = 0.0;
-            for (int d = 0; d < dim_; ++d)
-                dot += static_cast<double>(v_[i][d]) * static_cast<double>(p[d]);
-            const double val = (dot + static_cast<double>(t_[i])) / static_cast<double>(w_);
-            h[i] = static_cast<long long>(std::floor(val));
+            uint64_t vertex = point_to_vertex(data[idx]);
+            vertex_buckets_[vertex].push_back(idx);
         }
-        return h;
     }
 
-    /*bit mapping*/
-    int Hypercube::bit_for(int proj_id, long long hval) const
+    /*αφαίρεση όλων των δεδομένων*/
+    void Hypercube::clear_index()
     {
-        auto &mp = const_cast<std::unordered_map<long long, int> &>(bit_maps_[proj_id]);
-        auto it = mp.find(hval);
-        if (it != mp.end())
-            return it->second;
-
-        std::uint64_t x = static_cast<std::uint64_t>(hval);
-        x ^= x >> 33;
-        x *= 0xff51afd7ed558ccdULL;
-        x ^= x >> 33;
-        x *= 0xc4ceb9fe1a85ec53ULL;
-        x ^= x >> 33;
-        const int bit = static_cast<int>(x & 1ULL);
-
-        mp.emplace(hval, bit);
-        return bit;
+        vertex_buckets_.clear();
+        bit_map_.clear();
+        v_.clear();
+        t_.clear();
     }
 
-    /*υπολογισμός vertex id*/
-    std::uint64_t Hypercube::compute_vertex_id(const std::vector<long long> &hashes) const
+    /*Συλλογή υποψήφιων σημείων από κοντινές κορυφές του hypercube.
+      Διασχίζει κορυφές με BFS, αυξάνοντας προοδευτικά την απόσταση Hamming.*/
+    void Hypercube::collect_neighbors_by_hamming(uint64_t vertex, std::vector<int> &out_candidates) const
     {
-        std::uint64_t bits = 0ULL;
-        for (int i = 0; i < kproj_; ++i)
-            if (bit_for(i, hashes[i]))
-                bits |= (1ULL << i);
-        return bits;
-    }
+        std::queue<uint64_t> q;
+        std::unordered_set<uint64_t> visited;
+        q.push(vertex);
+        visited.insert(vertex);
 
-    /*παραγωγή λίστας κορυφών για probing*/
-    std::vector<std::uint64_t> Hypercube::vertices_to_probe(std::uint64_t base) const
-    {
-        std::vector<std::uint64_t> out;
-        out.reserve(probes_ > 0 ? probes_ : 1);
-        if (probes_ <= 0)
-            return out;
-        out.push_back(base);
-        if (probes_ == 1)
-            return out;
-
-        std::queue<std::uint64_t> q;
-        std::unordered_set<std::uint64_t> seen;
-        q.push(base);
-        seen.insert(base);
-
-        while (!q.empty() && static_cast<int>(out.size()) < probes_)
+        int probes = 0;
+        while (!q.empty() && probes < max_probes_)
         {
-            const std::uint64_t cur = q.front();
+            uint64_t v = q.front();
             q.pop();
-            for (int i = 0; i < kproj_; ++i)
+            ++probes;
+
+            /*αν υπάρχει bucket για αυτήν την κορυφή, προσθέτει τα indices*/
+            auto it = vertex_buckets_.find(v);
+            if (it != vertex_buckets_.end())
             {
-                const std::uint64_t nei = cur ^ (1ULL << i);
-                if (seen.insert(nei).second)
+                for (int idx : it->second)
+                    out_candidates.push_back(idx);
+                if ((int)out_candidates.size() >= max_candidates_)
+                    return;
+            }
+
+            /*δημιουργία γειτόνων με Hamming απόσταση 1*/
+            for (int b = 0; b < dprime_; ++b)
+            {
+                uint64_t neighbor = v ^ (1ULL << b);
+                if (!visited.count(neighbor))
                 {
-                    out.push_back(nei);
-                    if (static_cast<int>(out.size()) >= probes_)
-                        break;
-                    q.push(nei);
+                    visited.insert(neighbor);
+                    q.push(neighbor);
                 }
             }
         }
-
-        if (static_cast<int>(out.size()) > probes_)
-            out.resize(probes_);
-        return out;
     }
 
-    /*k-NN query*/
+    /*επιστρέφει όλους τους υποψηφίους γείτονες για ένα ερώτημα q*/
+    std::vector<int> Hypercube::query_candidates(const std::vector<float> &q) const
+    {
+        uint64_t vertex = point_to_vertex(q);
+        std::vector<int> candidates;
+        collect_neighbors_by_hamming(vertex, candidates);
+        return candidates;
+    }
+
+    /*Εκτέλεση ερωτήματος k-NN:
+      - Παίρνει όλους τους υποψηφίους (από κοντινές κορυφές)
+      - Υπολογίζει αποστάσεις
+      - Κρατά τους Ν μικρότερους*/
     std::vector<std::pair<int, float>> Hypercube::knn_query(const std::vector<float> &q, int N) const
     {
-        std::vector<std::pair<int, float>> out;
-        if (!data_ptr_ || data_ptr_->empty() || N <= 0)
-            return out;
+        std::vector<int> candidates = query_candidates(q);
+        std::vector<std::pair<int, float>> results;
 
-        const auto hq = compute_hashes(q);
-        const auto vq = compute_vertex_id(hq);
-        const auto list = vertices_to_probe(vq);
-
-        std::vector<std::pair<float, int>> cand;
-        cand.reserve(std::min(M_, static_cast<int>(data_ptr_->size())));
-        int examined = 0;
-
-        for (std::uint64_t vtx : list)
+        for (int idx : candidates)
         {
-            auto it = cube_.find(vtx);
-            if (it == cube_.end())
-                continue;
-            for (int idx : it->second)
-            {
-                float d = dist_func_(q, (*data_ptr_)[idx]);
-                cand.emplace_back(d, idx);
-                ++examined;
-                if (examined >= M_)
-                    break;
-            }
-            if (examined >= M_)
-                break;
+            float dist = dist_func_(q, (*data_ptr_)[idx]);
+            results.emplace_back(idx, dist);
         }
 
-        if (cand.empty())
-        {
-            std::cout << "[Hypercube::knn_query] No candidates found.\n";
-            return out;
-        }
+        /*ταξινόμηση(μερική) με βάση την απόσταση*/
+        std::partial_sort(results.begin(), results.begin() + std::min(N, (int)results.size()),
+                          results.end(), [](auto &a, auto &b)
+                          { return a.second < b.second; });
 
-        const int take = std::min(N, static_cast<int>(cand.size()));
-        std::nth_element(cand.begin(), cand.begin() + take, cand.end(),
-                         [](auto &a, auto &b)
-                         { return a.first < b.first; });
-        cand.resize(take);
-        std::sort(cand.begin(), cand.end(),
-                  [](auto &a, auto &b)
-                  { return a.first < b.first; });
-
-        out.reserve(cand.size());
-        for (const auto &p : cand)
-            out.emplace_back(p.second, p.first);
-
-        std::cout << "[Hypercube::knn_query] Examined " << examined
-                  << " candidates across " << list.size()
-                  << " vertices; returned top " << out.size() << ".\n";
-
-        return out;
+        if ((int)results.size() > N)
+            results.resize(N);
+        return results;
     }
 
-    /*range search*/
+    /*range search: επιστρέφει όλα τα σημεία με απόσταση ≤ R*/
     std::vector<int> Hypercube::range_search(const std::vector<float> &q, float R) const
     {
-        std::vector<int> res;
-        if (!data_ptr_ || data_ptr_->empty() || R < 0.0f)
-            return res;
-
-        const auto hq = compute_hashes(q);
-        const auto vq = compute_vertex_id(hq);
-        const auto list = vertices_to_probe(vq);
-
-        int examined = 0;
-        for (std::uint64_t vtx : list)
+        std::vector<int> candidates = query_candidates(q);
+        std::vector<int> in_range;
+        for (int idx : candidates)
         {
-            auto it = cube_.find(vtx);
-            if (it == cube_.end())
-                continue;
-            for (int idx : it->second)
-            {
-                float d = dist_func_(q, (*data_ptr_)[idx]);
-                if (d <= R)
-                    res.push_back(idx);
-                ++examined;
-                if (examined >= M_)
-                    break;
-            }
-            if (examined >= M_)
-                break;
+            float dist = dist_func_(q, (*data_ptr_)[idx]);
+            if (dist <= R)
+                in_range.push_back(idx);
         }
-
-        std::cout << "[Hypercube::range_search] Found " << res.size()
-                  << " points within R=" << R
-                  << " after checking " << examined
-                  << " candidates.\n";
-
-        return res;
+        return in_range;
     }
 
-    /*καθαρισμός όλων των πόρων*/
-    void Hypercube::clear_index()
-    {
-        std::cout << "[Hypercube] Clearing index and releasing resources...\n";
-        cube_.clear();
-        bit_maps_.clear();
-        v_.clear();
-        t_.clear();
-        data_ptr_ = nullptr;
-        std::cout << "[Hypercube] Resources successfully released.\n";
-    }
-
-} /*namespace nn*/
+} /*namespace hcube*/
