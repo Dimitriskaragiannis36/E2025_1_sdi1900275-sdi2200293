@@ -7,14 +7,21 @@
 
 namespace ivf {
 
-//κονστράκτορας
-IVFFlat::IVFFlat(int nlist, int nprobe, unsigned int seed,
-                 utils::DistanceFunc dist_func)
-    : nlist_(nlist),
+//κονστράκτορας 
+IVFFlat::IVFFlat(int kclusters, int nprobe, unsigned int seed, int N, float R, utils::DistanceFunc dist_func)
+    : kclusters_(kclusters),
       nprobe_(nprobe),
       seed_(seed),
-      dist_func_(::std::move(dist_func)),
-      data_ptr_(nullptr) {}
+      N_(N),
+      R_(R),
+      dist_func_(dist_func ? dist_func : utils::euclidean_distance) //αν δεν δοθεί, default
+{
+    std::cout << "IVFFlat initialized with kclusters=" << kclusters_
+              << ", nprobe=" << nprobe_
+              << ", seed=" << seed_
+              << ", N=" << N_
+              << ", R=" << R_ << std::endl;
+}
 
 //κατασκευή του index
 void IVFFlat::build_index(const std::vector<std::vector<float>>& data) {
@@ -23,8 +30,8 @@ void IVFFlat::build_index(const std::vector<std::vector<float>>& data) {
     std::size_t n = data.size();
 
     //1) Επιλογή του αριθμού συστάδων k με silhouette (αν nlist_ <= 0)
-    int k_opt = nlist_;
-    if (nlist_ <= 0) {
+    int k_opt = kclusters_;
+    if (k_opt <= 0) {
         int k_min = 2;
         int k_max = std::min<int>(10, std::sqrt(n)); // μην το παρακάνουμε
         std::cerr << "[IVF] Selecting best k via Silhouette in range ["
@@ -81,15 +88,15 @@ void IVFFlat::build_index(const std::vector<std::vector<float>>& data) {
                               seed_, false, dist_func_);
     kmeans.fit(subset);
     centroids_ = kmeans.centroids();
-    nlist_ = k_opt;
+    kclusters_ = k_opt;
 
     //4) Ανάθεση σημείων στο κοντινότερο centroid
-    inverted_lists_.assign(nlist_, {});
+    inverted_lists_.assign(kclusters_, {});
     for (std::size_t i = 0; i < n; ++i) {
         const auto& x = data[i];
         float bestd = std::numeric_limits<float>::max();
         int bestk = -1;
-        for (int k = 0; k < nlist_; ++k) {
+        for (int k = 0; k < kclusters_; ++k) {
             float d = dist_func_(x, centroids_[k]);
             if (d < bestd) {
                 bestd = d;
@@ -99,24 +106,24 @@ void IVFFlat::build_index(const std::vector<std::vector<float>>& data) {
         inverted_lists_[bestk].push_back(static_cast<int>(i));
     }
 
-    std::cerr << "[IVF] Built index with " << nlist_
+    std::cerr << "[IVF] Built index with " << kclusters_
               << " clusters (chosen by silhouette)." << std::endl;
 }
 
 //εύρεση υποψηφίων (βήμα coarse search)
 std::vector<int> IVFFlat::query_candidates(const std::vector<float>& q) const {
     std::vector<std::pair<float,int>> centroid_dists;
-    centroid_dists.reserve(nlist_);
-    for (int k = 0; k < nlist_; ++k) {
+    centroid_dists.reserve(kclusters_);
+    for (int k = 0; k < kclusters_; ++k) {
         float d = dist_func_(q, centroids_[k]);
         centroid_dists.emplace_back(d, k);
     }
 
     //κρατάμε τα nprobe κοντινότερα centroids
     std::nth_element(centroid_dists.begin(),
-                     centroid_dists.begin() + std::min(nprobe_, nlist_),
+                     centroid_dists.begin() + std::min(nprobe_, kclusters_),
                      centroid_dists.end());
-    centroid_dists.resize(std::min(nprobe_, nlist_));
+    centroid_dists.resize(std::min(nprobe_, kclusters_));
 
     //ενώνουμε τα inverted lists από τα πιο κοντινά centroids
     std::vector<int> candidates;
