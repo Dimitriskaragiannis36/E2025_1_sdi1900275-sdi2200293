@@ -1,6 +1,7 @@
 #include "helper.h"
 #include "lsh.h"
 #include "mnist.h"
+#include "sift.h"
 #include "kmeans.h"
 #include "silhouette.h"
 #include "ivff.h"
@@ -20,14 +21,38 @@ int main(int argc, char *argv[])
     std::vector<std::vector<float>> data;
     std::vector<std::vector<float>> queries;
 
+    /*έλεγχος κατάληξης αρχείου*/
+    auto ends_with = [](const std::string &s, const std::string &suf)
+    {
+        return s.size() >= suf.size() && s.compare(s.size() - suf.size(), suf.size(), suf) == 0;
+    };
+
     if (params.type == "mnist")
     {
         data = load_mnist_images(params.input_file, 1000);
         queries = load_mnist_images(params.query_file, 10);
     }
+    else if ((!params.input_file.empty() && (ends_with(params.input_file, ".dat") || ends_with(params.input_file, ".fvecs"))) ||
+             (!params.query_file.empty() && (ends_with(params.query_file, ".dat") || ends_with(params.query_file, ".fvecs"))))
+    {
+        /*φόρτωση SIFT (fvecs-like LE: [int32 dim][dim * float32])*/
+        int maxN = params.N > 0 ? params.N : -1;
+        int maxQ = params.Q > 0 ? params.Q : -1;
+
+        if (!params.input_file.empty())
+            data = sift::load_sift_dat(params.input_file, maxN, 128);
+        if (!params.query_file.empty())
+            queries = sift::load_sift_dat(params.query_file, maxQ, 128);
+
+        std::cout << "Loaded SIFT dataset: " << data.size()
+                  << " x " << (data.empty() ? 0 : data[0].size());
+        if (!queries.empty())
+            std::cout << " | queries: " << queries.size();
+        std::cout << "\n";
+    }
     else
     {
-        std::cerr << "SIFT loader not implemented yet!\n";
+        std::cerr << "Unsupported dataset type. Use MNIST or provide .dat/.fvecs files.\n";
         return 1;
     }
 
@@ -73,7 +98,13 @@ int main(int argc, char *argv[])
     else if (params.use_ivfflat)
     {
         std::cout << "\n>> Using IVFFlat index...\n";
-        ivf::IVFFlat index(params.kclusters, params.nprobe, params.seed, params.N, params.R);
+        int dim = static_cast<int>(data[0].size());
+        nn::IVFFlat index(
+            dim,
+            params.nlist,
+            params.nprobe,
+            params.seed,
+            utils::euclidean_distance);
 
         index.build_index(data);
         utils::run_queries(index, data, queries, params, out);
