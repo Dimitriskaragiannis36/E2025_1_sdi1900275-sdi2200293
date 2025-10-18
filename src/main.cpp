@@ -15,16 +15,17 @@ int main(int argc, char *argv[])
 {
     /*ανάγνωση παραμέτρων από τη γραμμή εντολών*/
     utils::Params params = utils::parse_args(argc, argv);
-    utils::print_params(params);
+    utils::print_params(params); // kept
 
     /*φόρτωση δεδομένων*/
     std::vector<std::vector<float>> data;
     std::vector<std::vector<float>> queries;
 
-    /*έλεγχος κατάληξης αρχείου*/
+    /*έλεγχος κατάληξης ονόματος αρχείου*/
     auto ends_with = [](const std::string &s, const std::string &suf)
     {
-        return s.size() >= suf.size() && s.compare(s.size() - suf.size(), suf.size(), suf) == 0;
+        return s.size() >= suf.size() &&
+               s.compare(s.size() - suf.size(), suf.size(), suf) == 0;
     };
 
     if (params.type == "mnist")
@@ -32,10 +33,10 @@ int main(int argc, char *argv[])
         data = load_mnist_images(params.input_file, 1000);
         queries = load_mnist_images(params.query_file, 10);
     }
+    /*ελάχιστο branch SIFT -- ενεργοποιείται μόνο για αρχεία .dat/.fvecs*/
     else if ((!params.input_file.empty() && (ends_with(params.input_file, ".dat") || ends_with(params.input_file, ".fvecs"))) ||
              (!params.query_file.empty() && (ends_with(params.query_file, ".dat") || ends_with(params.query_file, ".fvecs"))))
     {
-        /*φόρτωση SIFT (fvecs-like LE: [int32 dim][dim * float32])*/
         int maxN = params.N > 0 ? params.N : -1;
         int maxQ = params.Q > 0 ? params.Q : -1;
 
@@ -45,14 +46,14 @@ int main(int argc, char *argv[])
             queries = sift::load_sift_dat(params.query_file, maxQ, 128);
 
         std::cout << "Loaded SIFT dataset: " << data.size()
-                  << " x " << (data.empty() ? 0 : data[0].size());
+                  << " vectors x " << (data.empty() ? 0 : data[0].size()) << " dims";
         if (!queries.empty())
             std::cout << " | queries: " << queries.size();
         std::cout << "\n";
     }
     else
     {
-        std::cerr << "Unsupported dataset type. Use MNIST or provide .dat/.fvecs files.\n";
+        std::cerr << "SIFT loader not implemented yet!\n";
         return 1;
     }
 
@@ -98,13 +99,7 @@ int main(int argc, char *argv[])
     else if (params.use_ivfflat)
     {
         std::cout << "\n>> Using IVFFlat index...\n";
-        int dim = static_cast<int>(data[0].size());
-        nn::IVFFlat index(
-            dim,
-            params.nlist,
-            params.nprobe,
-            params.seed,
-            utils::euclidean_distance);
+        ivf::IVFFlat index(params.kclusters, params.nprobe, params.seed, params.N, params.R);
 
         index.build_index(data);
         utils::run_queries(index, data, queries, params, out);
