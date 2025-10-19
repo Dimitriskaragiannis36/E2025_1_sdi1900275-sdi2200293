@@ -5,7 +5,6 @@
 
 namespace utils
 {
-
     /*συνάρτηση για την ανάλυση των παραμέτρων από τη γραμμή εντολών*/
     Params parse_args(int argc, char *argv[])
     {
@@ -37,26 +36,34 @@ namespace utils
             else if (arg == "-seed" && i + 1 < argc)
                 p.seed = atoi(argv[++i]);
 
+            /*hypercube και κοινά switches*/
             else if (arg == "-hypercube")
                 p.use_hypercube = true;
             else if (arg == "-kproj" && i + 1 < argc)
                 p.kproj = std::stoi(argv[++i]);
             else if (arg == "-M" && i + 1 < argc)
-                p.max_candidates = std::stoi(argv[++i]);
+            {
+                /*Σημείωση: Το -M είναι είτε το max_candidates του Hypercube είτε το M του IVFPQ.
+                    Το αποθηκεύουμε και στα δύο. Το ενεργό εξαρτάται από τη λειτουργία.*/
+                int val = std::stoi(argv[++i]);
+                p.max_candidates = val;
+                p.pq_M = val;
+            }
             else if (arg == "-probes" && i + 1 < argc)
                 p.max_probes = std::stoi(argv[++i]);
 
             /*νέα flags για IVFFlat / IVFPQ*/
             else if (arg == "-ivfflat")
                 p.use_ivfflat = true;
-            /*else if (arg == "-ivfpq") p.use_ivfpq = true;*/
-
+            else if (arg == "-ivfpq")
+                p.use_ivfpq = true;
             else if (arg == "-kclusters" && i + 1 < argc)
                 p.kclusters = atoi(argv[++i]);
             else if (arg == "-nprobe" && i + 1 < argc)
                 p.nprobe = atoi(argv[++i]);
-
-            /*υπάρχουσα επιλογή για LSH*/
+            else if (arg == "-nbits" && i + 1 < argc)
+                p.pq_nbits = atoi(argv[++i]);
+            /*LSH*/
             else if (arg == "-lsh")
                 p.use_lsh = true;
             /*άγνωστη παράμετρος*/
@@ -66,7 +73,7 @@ namespace utils
             }
         }
 
-        /*default R ανάλογα με το dataset*/
+        /*προεπιλεγμένο R ανάλογα με το σύνολο δεδομένων*/
         if (p.type == "sift")
             p.R = 2.0f;
         else
@@ -86,6 +93,7 @@ namespace utils
         std::cout << " input=" << p.input_file
                   << " query=" << p.query_file
                   << " output=" << p.output_file << "\n";
+
         if (p.use_lsh)
         {
             std::cout << " [LSH mode] k=" << p.k
@@ -106,10 +114,15 @@ namespace utils
             std::cout << " [IVFFlat mode] kclusters=" << p.kclusters
                       << " nprobe=" << p.nprobe << "\n";
         }
-        /*if (p.use_ivfpq) {
+
+        if (p.use_ivfpq)
+        {
             std::cout << " [IVFPQ mode] kclusters=" << p.kclusters
-                      << " nprobe=" << p.nprobe << "\n";
-        }*/
+                      << " nprobe=" << p.nprobe
+                      << " M=" << p.pq_M
+                      << " nbits=" << p.pq_nbits << "\n";
+        }
+
         std::cout << " range=" << (p.do_range ? "true" : "false") << "\n";
     }
 
