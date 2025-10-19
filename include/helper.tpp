@@ -20,8 +20,8 @@ namespace utils
             out << "LSH" << std::endl;
         else if (params.use_ivfflat)
             out << "IVFFlat" << std::endl;
-        /*else if (params.use_ivfpq)
-            out << "IVFPQ" << std::endl;*/
+        else if (params.use_ivfpq)
+            out << "IVFPQ" << std::endl;
         else if (params.use_hypercube)
             out
                 << "Hypercube" << std::endl;
