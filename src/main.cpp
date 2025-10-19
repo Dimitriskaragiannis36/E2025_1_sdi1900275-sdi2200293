@@ -6,6 +6,7 @@
 #include "silhouette.h"
 #include "ivff.h"
 #include "hypercube.h"
+#include "ivfpq.h"
 #include <iostream>
 #include <fstream>
 #include <chrono>
@@ -15,8 +16,7 @@ int main(int argc, char *argv[])
 {
     /*ανάγνωση παραμέτρων από τη γραμμή εντολών*/
     utils::Params params = utils::parse_args(argc, argv);
-    utils::print_params(params); // kept
-
+    utils::print_params(params);
     /*φόρτωση δεδομένων*/
     std::vector<std::vector<float>> data;
     std::vector<std::vector<float>> queries;
@@ -52,7 +52,6 @@ int main(int argc, char *argv[])
         std::cerr << "Unknown dataset type! Use -type mnist or -type sift (or provide appropriate filenames).\n";
         return 1;
     }
-
     /*δημιουργία αλγορίθμου αναζήτησης (LSH ή IVFFlat ή IVFPQ)*/
     std::ofstream out(params.output_file);
     if (!out.is_open())
@@ -72,7 +71,6 @@ int main(int argc, char *argv[])
         utils::run_queries(lsh, data, queries, params, out);
         lsh.clear_index();
     }
-
     /*εκτέλεση hypercube*/
     else if (params.use_hypercube)
     {
@@ -90,7 +88,6 @@ int main(int argc, char *argv[])
         utils::run_queries(index, data, queries, params, out);
         index.clear_index();
     }
-
     /*εκτέλεση ivfflat*/
     else if (params.use_ivfflat)
     {
@@ -99,33 +96,44 @@ int main(int argc, char *argv[])
 
         index.build_index(data);
         utils::run_queries(index, data, queries, params, out);
-
         /*προαιρετικό: K-Means + Silhouette*/
         std::cout << "\nComputing Silhouette score for IVFFlat clusters...\n";
-
         clustering::KMeans model(
             3, 100, 1e-4,
             clustering::KMeans::InitMethod::KMEANS_PLUS_PLUS,
             42, true, utils::euclidean_distance);
-
         model.fit(data);
-
         clustering::Silhouette sil;
         float score = sil.compute(data, model.labels(), model.k());
-
         std::cout << "\nSilhouette score = " << score << std::endl;
 
         index.clear_index();
     }
+    /*εκτέλεση ivfpq*/
+    else if (params.use_ivfpq)
+    {
+        std::cout << "\n>> Using IVFPQ index...\n";
+        ivf::IVFPQ index(params.kclusters,
+                         params.nprobe,
+                         params.pq_M,
+                         params.pq_nbits,
+                         params.seed, params.N, params.R);
 
-    /*εκτέλεση ivfpq (προς υλοποίηση)
-    else if (params.use_ivfpq) {
-        std::cout << "\n>> Using IVFPQ index (placeholder)...\n";
-        // μελλοντικά: nn::IVFPQ ivfpq(...)
-        // ivfpq.build_index(data);
-        // utils::run_queries(ivfpq, data, queries, params, out);
-    }*/
+        index.build_index(data);
+        utils::run_queries(index, data, queries, params, out);
+        /*προαιρετικό: K-Means + Silhouette*/
+        std::cout << "\nComputing Silhouette score for IVFFlat clusters...\n";
+        clustering::KMeans model(
+            3, 100, 1e-4,
+            clustering::KMeans::InitMethod::KMEANS_PLUS_PLUS,
+            42, true, utils::euclidean_distance);
+        model.fit(data);
+        clustering::Silhouette sil;
+        float score = sil.compute(data, model.labels(), model.k());
+        std::cout << "\nSilhouette score = " << score << std::endl;
 
+        index.clear_index();
+    }
     else
     {
         std::cerr << "Error: No index type specified! Use -lsh or -ivfflat or -ivfpq.\n";
@@ -133,6 +141,5 @@ int main(int argc, char *argv[])
     }
 
     out.close();
-
     return 0;
 }

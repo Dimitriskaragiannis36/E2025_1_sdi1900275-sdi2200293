@@ -26,31 +26,32 @@ namespace utils
         std::string type = "mnist";
         bool do_range = true;
 
-        // LSH
+        /*LSH*/
         int k = 4;
         int L = 5;
         int w = 4;
         bool use_lsh = false;
 
         /*Hypercube*/
-        bool use_hypercube = false; /*ενεργοποίηση αλγορίθμου Hypercube*/
-        int kproj = 14;             /*διάσταση της τυχαίας προβολής (d')*/
-        int max_candidates = 10;    /*μέγιστος αριθμός υποψήφιων σημείων (M)*/
-        int max_probes = 2;         /*μέγιστος αριθμός κορυφών (probes)*/
+        bool use_hypercube = false;
+        int kproj = 14;
+        int max_candidates = 10;
+        int max_probes = 2;
 
         /*IVFFlat*/
         bool use_ivfflat = false;
-        int kclusters = 50; /*αριθμός συστάδων (nlist)*/
-        int nprobe = 5;     /*αριθμός clusters που εξετάζονται κατά την αναζήτηση*/
+        int kclusters = 50;
+        int nprobe = 5;
+
+        /*IVFPQ*/
+        bool use_ivfpq = false;
+        int pq_M = 16;    /*αριθμός υποδιανυσμάτων M*/
+        int pq_nbits = 8; /*μέγεθος codebook = 2^nbits ανά υπο-διανύσμα*/
     };
 
-    /*ανάλυση παραμέτρων από γραμμή εντολών*/
     Params parse_args(int argc, char *argv[]);
-
-    /*εκτύπωση παραμέτρων*/
     void print_params(const Params &p);
 
-    /*template-based run_queries (λειτουργεί για LSH, Hypercube, IVF κ.λπ.)*/
     template <typename IndexType>
     void run_queries(IndexType &index,
                      const std::vector<std::vector<float>> &data,
@@ -58,11 +59,10 @@ namespace utils
                      const Params &params,
                      std::ofstream &out);
 
-    /*απλή ευκλείδεια απόσταση*/
     float euclidean_distance(const std::vector<float> &x, const std::vector<float> &y);
 
 } /*namespace utils*/
 
-#include "helper.tpp" /*θα βάλουμε εδώ το template body*/
+#include "helper.tpp"
 
 #endif /*HELPER_H*/
