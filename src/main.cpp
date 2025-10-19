@@ -1,6 +1,7 @@
 #include "helper.h"
 #include "lsh.h"
 #include "mnist.h"
+#include "sift.h"
 #include "kmeans.h"
 #include "silhouette.h"
 #include "ivff.h"
@@ -14,7 +15,7 @@ int main(int argc, char *argv[])
 {
     /*ανάγνωση παραμέτρων από τη γραμμή εντολών*/
     utils::Params params = utils::parse_args(argc, argv);
-    utils::print_params(params);
+    utils::print_params(params); // kept
 
     /*φόρτωση δεδομένων*/
     std::vector<std::vector<float>> data;
@@ -25,9 +26,30 @@ int main(int argc, char *argv[])
         data = load_mnist_images(params.input_file, 1000);
         queries = load_mnist_images(params.query_file, 10);
     }
+    else if (params.type == "sift")
+    {
+        /*δεν περιορίζουμε την ανάγνωση (όλα τα vectors) — βάλτους όριο αν θέλεις*/
+        int maxN = 1000;
+        int maxQ = 100;
+
+        if (!params.input_file.empty())
+        {
+            data = sift::load_sift_dat(params.input_file, maxN, 128);
+        }
+        if (!params.query_file.empty())
+        {
+            queries = sift::load_sift_dat(params.query_file, maxQ, 128);
+        }
+
+        std::cout << "Loaded SIFT dataset: " << data.size()
+                  << " vectors x " << (data.empty() ? 0 : data[0].size()) << " dims";
+        if (!queries.empty())
+            std::cout << " | queries: " << queries.size();
+        std::cout << "\n";
+    }
     else
     {
-        std::cerr << "SIFT loader not implemented yet!\n";
+        std::cerr << "Unknown dataset type! Use -type mnist or -type sift (or provide appropriate filenames).\n";
         return 1;
     }
 
