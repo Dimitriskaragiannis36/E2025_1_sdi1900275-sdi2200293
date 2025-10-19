@@ -21,29 +21,25 @@ int main(int argc, char *argv[])
     std::vector<std::vector<float>> data;
     std::vector<std::vector<float>> queries;
 
-    /*έλεγχος κατάληξης ονόματος αρχείου*/
-    auto ends_with = [](const std::string &s, const std::string &suf)
-    {
-        return s.size() >= suf.size() &&
-               s.compare(s.size() - suf.size(), suf.size(), suf) == 0;
-    };
-
     if (params.type == "mnist")
     {
         data = load_mnist_images(params.input_file, 1000);
         queries = load_mnist_images(params.query_file, 10);
     }
-    /*ελάχιστο branch SIFT -- ενεργοποιείται μόνο για αρχεία .dat/.fvecs*/
-    else if ((!params.input_file.empty() && (ends_with(params.input_file, ".dat") || ends_with(params.input_file, ".fvecs"))) ||
-             (!params.query_file.empty() && (ends_with(params.query_file, ".dat") || ends_with(params.query_file, ".fvecs"))))
+    else if (params.type == "sift")
     {
-        int maxN = params.N > 0 ? params.N : -1;
-        int maxQ = params.Q > 0 ? params.Q : -1;
+        /*δεν περιορίζουμε την ανάγνωση (όλα τα vectors) — βάλτους όριο αν θέλεις*/
+        int maxN = 1000;
+        int maxQ = 100;
 
         if (!params.input_file.empty())
+        {
             data = sift::load_sift_dat(params.input_file, maxN, 128);
+        }
         if (!params.query_file.empty())
+        {
             queries = sift::load_sift_dat(params.query_file, maxQ, 128);
+        }
 
         std::cout << "Loaded SIFT dataset: " << data.size()
                   << " vectors x " << (data.empty() ? 0 : data[0].size()) << " dims";
@@ -53,7 +49,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        std::cerr << "SIFT loader not implemented yet!\n";
+        std::cerr << "Unknown dataset type! Use -type mnist or -type sift (or provide appropriate filenames).\n";
         return 1;
     }
 
