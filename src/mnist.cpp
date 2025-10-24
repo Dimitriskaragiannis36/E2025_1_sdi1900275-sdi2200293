@@ -38,11 +38,17 @@ vector<vector<float>> load_mnist_images(const string &filename, int max_images) 
 
     vector<vector<float>> images(count, vector<float>(dim));
 
+    //Προαιρετική κανονικοποίηση
+    bool normalize = false;  //true για κανονικοποίηση στο [0,1], false για [0,255]
+
     for (int i = 0; i < count; i++) {
         for (int j = 0; j < dim; j++) {
             unsigned char pixel;
             f.read(reinterpret_cast<char*>(&pixel), 1);
-            images[i][j] = pixel / 255.0f; //normalize σε [0,1]
+            if (normalize)
+                images[i][j] = static_cast<float>(pixel) / 255.0f;
+            else
+                images[i][j] = static_cast<float>(pixel);
         }
     }
 

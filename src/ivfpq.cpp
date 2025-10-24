@@ -246,7 +246,6 @@ namespace ivf
       return;
     data_ptr_ = &data;
     size_t n = data.size();
-    int D = static_cast<int>(data[0].size());
 
     /*1) επιλογή k μέσω silhouette αν kclusters_ <= 0 (όπως στο IVFFlat)*/
     int k_opt = kclusters_;
