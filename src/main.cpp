@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     {
         /*δεν περιορίζουμε την ανάγνωση (όλα τα vectors) — βάλτους όριο αν θέλεις*/
         int maxN = 1000;
-        int maxQ = 100;
+        int maxQ = 10;
 
         if (!params.input_file.empty())
         {

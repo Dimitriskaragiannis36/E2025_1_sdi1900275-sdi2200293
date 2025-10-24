@@ -15,6 +15,7 @@ static uint32_t read_uint32_big_endian(ifstream &f) {
            (uint32_t(bytes[3]));
 }
 
+template <bool Normalize>
 vector<vector<float>> load_mnist_images(const string &filename, int max_images) {
     ifstream f(filename, ios::binary);
     if (!f.is_open()) {
@@ -38,14 +39,11 @@ vector<vector<float>> load_mnist_images(const string &filename, int max_images) 
 
     vector<vector<float>> images(count, vector<float>(dim));
 
-    //Προαιρετική κανονικοποίηση
-    bool normalize = false;  //true για κανονικοποίηση στο [0,1], false για [0,255]
-
     for (int i = 0; i < count; i++) {
         for (int j = 0; j < dim; j++) {
             unsigned char pixel;
             f.read(reinterpret_cast<char*>(&pixel), 1);
-            if (normalize)
+            if constexpr (Normalize)
                 images[i][j] = static_cast<float>(pixel) / 255.0f;
             else
                 images[i][j] = static_cast<float>(pixel);
@@ -54,3 +52,7 @@ vector<vector<float>> load_mnist_images(const string &filename, int max_images) 
 
     return images;
 }
+
+//ρητή εισαγωγή για τις δύο εκδοχές της συνάρτησης με template
+template vector<vector<float>> load_mnist_images<false>(const string&, int);
+template vector<vector<float>> load_mnist_images<true>(const string&, int);
