@@ -91,19 +91,29 @@ vector<float> Silhouette::compute_per_cluster(
     vector<float> cluster_avg(k, 0.0f);
     vector<int> cluster_count(k, 0);
 
+    //συγκεντρώνουμε τα s(i) ανά cluster
     for (size_t i = 0; i < labels.size(); ++i) {
         int c = labels[i];
-        cluster_avg[c] += s_values[i];
-        cluster_count[c]++;
+        if (c >= 0 && c < k) {
+            cluster_avg[c] += s_values[i];
+            cluster_count[c]++;
+        }
     }
 
+    //υπολογίζουμε τον μέσο όρο ανά cluster
     for (int c = 0; c < k; ++c) {
-        if (cluster_count[c] > 0)
+        if (cluster_count[c] > 0) {
             cluster_avg[c] /= cluster_count[c];
+        } else {
+            //undefined silhouette για άδειο cluster
+            cluster_avg[c] = std::numeric_limits<float>::quiet_NaN();
+            std::cerr << "Warning: Empty cluster " << c << " (silhouette undefined)\n";
+        }
     }
 
     return cluster_avg;
 }
+
 
 
 } //namespace clustering

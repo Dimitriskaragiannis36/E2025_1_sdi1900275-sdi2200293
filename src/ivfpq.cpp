@@ -29,8 +29,8 @@ namespace ivf
 
     int base = D / M_;
     int rem = D % M_;
-
     int start = 0;
+
     for (int m = 0; m < M_; ++m)
     {
       int sz = base + (m < rem ? 1 : 0);
@@ -44,20 +44,20 @@ namespace ivf
   {
     if (residuals.empty())
       return;
+
     int D = static_cast<int>(residuals[0].size());
     set_dimension_splits(D);
 
-    codebooks_.clear();
-    codebooks_.resize(M_);
-
+    codebooks_.assign(M_, {});
     std::mt19937 rng(1234567);
-    /*εκπαίδευση ενός KMeans σε κάθε υποχώρο ανεξάρτητα*/
+
+    /* εκπαίδευση ενός KMeans σε κάθε υποχώρο ανεξάρτητα */
     for (int m = 0; m < M_; ++m)
     {
       int d_m = sizes_[m];
       int s_m = starts_[m];
 
-      /*συλλογή δειγμάτων εκπαίδευσης προβαλλόμενων στον υποχώρο m*/
+      //υποσύνολο residuals για τον υποχώρο m
       std::vector<std::vector<float>> subtrain;
       subtrain.reserve(residuals.size());
       for (const auto &r : residuals)
@@ -68,46 +68,36 @@ namespace ivf
         subtrain.emplace_back(std::move(sub));
       }
 
-      clustering::KMeans kmeans(Ks_, /*max_iters*/ 100, /*tol*/ 1e-4f,
+      clustering::KMeans kmeans(Ks_, 100, 1e-4f,
                                 clustering::KMeans::InitMethod::KMEANS_PLUS_PLUS,
-                                /*seed*/ 1337 + m, /*verbose*/ false, dist_func_);
-      /*σε πολύ μικρά σύνολα εκπαίδευσης, περιορίζουμε το Ks (αποφυγή κατάρρευσης λόγω κενών συσταδοποιήσεων)*/
+                                1337 + m, false, dist_func_);
+
+      //αν δεν υπάρχουν αρκετά δείγματα για Ks κέντρα
       if ((int)subtrain.size() < Ks_)
       {
-        /*εναλλακτική: αντιγραφή δειγμάτων ή μείωση του Ks*/
         int newKs = std::max(2, (int)subtrain.size());
-        if (newKs < Ks_)
-        {
-          std::cerr << "[PQ] Reducing Ks in subspace " << m
-                    << " to " << newKs << " (insufficient data)\n";
-          /*μικρός KMeans με λιγότερα κεντροειδή*/
-          clustering::KMeans small(newKs, 100, 1e-4f,
-                                   clustering::KMeans::InitMethod::KMEANS_PLUS_PLUS,
-                                   1337 + m, false, dist_func_);
-          small.fit(subtrain);
-          const auto &C = small.centroids();
-          /*υπερδειγματοληψία έως Ks επαναλαμβάνοντας δείγματα & προσθέτοντας θόρυβο*/
-          codebooks_[m].assign(Ks_, std::vector<float>(d_m, 0.0f));
-          for (int k = 0; k < Ks_; ++k)
-          {
-            const auto &src = C[k % newKs];
-            codebooks_[m][k] = src;
-          }
-          continue;
-        }
+        std::cerr << "[PQ] Reducing Ks in subspace " << m
+                  << " to " << newKs << " (insufficient data)\n";
+        clustering::KMeans small(newKs, 100, 1e-4f,
+                                 clustering::KMeans::InitMethod::KMEANS_PLUS_PLUS,
+                                 1337 + m, false, dist_func_);
+        small.fit(subtrain);
+        const auto &C = small.centroids();
+        codebooks_[m].assign(Ks_, std::vector<float>(d_m, 0.0f));
+        for (int k = 0; k < Ks_; ++k)
+          codebooks_[m][k] = C[k % newKs];
+        continue;
       }
 
       kmeans.fit(subtrain);
       codebooks_[m] = kmeans.centroids();
-      /*σε σπάνιες ιδιάζουσες περιπτώσεις, το kmeans μπορεί να επιστρέψει <Ks_ κεντροειδή>*/
+
       if ((int)codebooks_[m].size() < Ks_)
       {
         int have = codebooks_[m].size();
         codebooks_[m].resize(Ks_, std::vector<float>(d_m, 0.0f));
         for (int k = have; k < Ks_; ++k)
-        {
           codebooks_[m][k] = codebooks_[m][k % have];
-        }
       }
     }
   }
@@ -122,6 +112,7 @@ namespace ivf
 
       float best = std::numeric_limits<float>::max();
       int bestk = 0;
+
       for (int k = 0; k < Ks_; ++k)
       {
         const auto &c = codebooks_[m][k];
@@ -131,7 +122,6 @@ namespace ivf
           float diff = residual[s_m + j] - c[j];
           dist += diff * diff;
         }
-        dist = std::sqrt(dist);
         if (dist < best)
         {
           best = dist;
@@ -150,6 +140,7 @@ namespace ivf
     {
       int d_m = sizes_[m];
       int s_m = starts_[m];
+
       for (int k = 0; k < Ks_; ++k)
       {
         const auto &c = codebooks_[m][k];
@@ -159,7 +150,7 @@ namespace ivf
           float diff = residual_q[s_m + j] - c[j];
           dist += diff * diff;
         }
-        lut[m][k] = std::sqrt(dist);
+        lut[m][k] = dist;
       }
     }
     return lut;
@@ -187,9 +178,9 @@ namespace ivf
         N_(N),
         R_(R),
         dist_func_(dist_func ? dist_func : utils::euclidean_distance),
-        pq_(M, nbits, dist_func)
+        pq_(M, nbits, dist_func_)
   {
-    std::cout << "IVFPQ αρχικοποιήθηκε με kclusters=" << kclusters_
+    std::cout << "IVFPQ initialized with kclusters=" << kclusters_
               << ", nprobe=" << nprobe_
               << ", M=" << M_
               << ", nbits=" << nbits_
@@ -224,6 +215,7 @@ namespace ivf
     int take = std::min(nprobe_, kclusters_);
     std::nth_element(ds.begin(), ds.begin() + take, ds.end());
     ds.resize(take);
+
     std::vector<int> ids;
     ids.reserve(take);
     for (auto &p : ds)
@@ -244,10 +236,11 @@ namespace ivf
   {
     if (data.empty())
       return;
+
     data_ptr_ = &data;
     size_t n = data.size();
 
-    /*1) επιλογή k μέσω silhouette αν kclusters_ <= 0 (όπως στο IVFFlat)*/
+    /* 1) επιλογή k μέσω silhouette αν χρειάζεται */
     int k_opt = kclusters_;
     if (k_opt <= 0)
     {
@@ -273,13 +266,14 @@ namespace ivf
     }
     kclusters_ = k_opt;
 
-    /*2) k-means σε υποσύνολο για να ληφθούν κεντροειδή (χονδρικός κβαντιστής)*/
+    /* 2) K-Means σε υποσύνολο για coarse quantizer */
     size_t subset_size = std::max<size_t>(kclusters_, (size_t)std::sqrt(n));
     std::mt19937 rng(seed_);
     std::uniform_int_distribution<size_t> rnd(0, n - 1);
     std::unordered_set<size_t> pick;
     std::vector<std::vector<float>> subset;
     subset.reserve(subset_size);
+
     while (subset.size() < subset_size)
     {
       size_t i = rnd(rng);
@@ -293,7 +287,7 @@ namespace ivf
     km.fit(subset);
     centroids_ = km.centroids();
 
-    /*3) Προετοιμασία λιστών & συλλογή residuals για εκπαίδευση του PQ*/
+    /* 3) συλλογή residuals για εκπαίδευση του PQ */
     invlists_.assign(kclusters_, {});
     std::vector<std::vector<float>> residuals_for_pq;
     residuals_for_pq.reserve(subset_size);
@@ -302,15 +296,9 @@ namespace ivf
     {
       int cid = nearest_centroid(data[i]);
       auto r = residual_of(data[i], centroids_[cid]);
-      /*δειγματοληψία ορισμένων residuals για εκπαίδευση του PQ*/
-      if (i % std::max<size_t>(1, n / (size_t)std::min(5000, (int)n)))
-      {
-        /*υποδειγματοληψία, διατήρηση επαρκούς πλήθους*/
-      }
-      residuals_for_pq.emplace_back(r);
+      residuals_for_pq.emplace_back(std::move(r));
     }
 
-    /*προαιρετική υποδειγματοληψία residuals (αποφυγή τεράστιων KMeans ανά υποχώρο)*/
     if ((int)residuals_for_pq.size() > 20000)
     {
       std::vector<std::vector<float>> small;
@@ -325,10 +313,10 @@ namespace ivf
       residuals_for_pq.swap(small);
     }
 
-    /*4) Εκπαίδευση του παγκόσμιου residual PQ*/
+    /* 4) εκπαίδευση του PQ πάνω στα residuals */
     pq_.train(residuals_for_pq);
 
-    /*5) Κωδικοποίηση residuals στις λίστες*/
+    /* 5) κωδικοποίηση residuals και κατασκευή inverted lists */
     for (size_t i = 0; i < n; ++i)
     {
       int cid = nearest_centroid(data[i]);
@@ -337,8 +325,8 @@ namespace ivf
       invlists_[cid].push_back({static_cast<int>(i), std::move(code)});
     }
 
-    std::cerr << "[IVFPQ] Δημιουργήθηκε index με " << kclusters_
-              << " λίστες; PQ(M=" << M_ << ", nbits=" << nbits_ << ").\n";
+    std::cerr << "[IVFPQ] Built index with " << kclusters_
+              << " lists; PQ(M=" << M_ << ", nbits=" << nbits_ << ").\n";
   }
 
   std::vector<int> IVFPQ::query_candidates(const std::vector<float> &q) const
@@ -346,10 +334,8 @@ namespace ivf
     std::vector<int> ids;
     auto topc = top_nprobe_centroids(q);
     for (int cid : topc)
-    {
       for (const auto &e : invlists_[cid])
         ids.push_back(e.id);
-    }
     return ids;
   }
 
@@ -359,14 +345,8 @@ namespace ivf
     if (!data_ptr_ || centroids_.empty())
       return out;
 
-    /*για κάθε επιλεγμένη λίστα, υπολογίζουμε το residual του ερωτήματος, το LUT, και στη συνέχεια ADC*/
-    struct Pair
-    {
-      float dist;
-      int id;
-    };
+    struct Pair { float dist; int id; };
     std::vector<Pair> heap;
-    heap.reserve(1024);
 
     auto topc = top_nprobe_centroids(q);
     for (int cid : topc)
@@ -383,17 +363,14 @@ namespace ivf
     if (heap.empty())
       return out;
 
-    /*διατήρηση των N μικρότερων*/
     if ((int)heap.size() > N)
     {
       std::nth_element(heap.begin(), heap.begin() + N, heap.end(),
-                       [](const Pair &a, const Pair &b)
-                       { return a.dist < b.dist; });
+                       [](const Pair &a, const Pair &b) { return a.dist < b.dist; });
       heap.resize(N);
     }
     std::sort(heap.begin(), heap.end(),
-              [](const Pair &a, const Pair &b)
-              { return a.dist < b.dist; });
+              [](const Pair &a, const Pair &b) { return a.dist < b.dist; });
 
     out.reserve(heap.size());
     for (auto &p : heap)
