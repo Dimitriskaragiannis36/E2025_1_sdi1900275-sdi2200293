@@ -21,4 +21,5 @@ run: $(TARGET)
 	./$(TARGET)
 
 clean:
-	rm -rf build bin
+	rm -rf build bin plots
+	rm -f results*.txt
