@@ -85,45 +85,61 @@ namespace utils
     /*συνάρτηση για την εκτύπωση των παραμέτρων*/
     void print_params(const Params &p)
     {
-        std::cout << "Parameters:\n";
-        std::cout << " seed=" << p.seed
-                  << " N=" << p.N
-                  << " R=" << p.R
-                  << " type=" << p.type << "\n";
-        std::cout << " input=" << p.input_file
-                  << " query=" << p.query_file
-                  << " output=" << p.output_file << "\n";
+        std::cout << "\n=========================\n";
+        std::cout << "      RUN PARAMETERS     \n";
+        std::cout << "=========================\n";
+
+        std::cout << "Input file        : " << (p.input_file.empty() ? "(none)" : p.input_file) << "\n";
+        std::cout << "Query file        : " << (p.query_file.empty() ? "(none)" : p.query_file) << "\n";
+        std::cout << "Output file       : " << (p.output_file.empty() ? "(none)" : p.output_file) << "\n";
+        std::cout << "Dataset type      : " << (p.type.empty() ? "(none)" : p.type) << "\n\n";
+
+        std::cout << "General:\n";
+        std::cout << "  seed            = " << p.seed << "\n";
+        std::cout << "  N (neighbors)   = " << p.N << "\n";
+        std::cout << "  R (radius)      = " << p.R << "\n";
+        std::cout << "  range search    = " << (p.do_range ? "true" : "false") << "\n\n";
+
+        std::cout << "Modes enabled:\n";
+        std::cout << "  use_lsh         = " << (p.use_lsh ? "true" : "false") << "\n";
+        std::cout << "  use_hypercube   = " << (p.use_hypercube ? "true" : "false") << "\n";
+        std::cout << "  use_ivfflat     = " << (p.use_ivfflat ? "true" : "false") << "\n";
+        std::cout << "  use_ivfpq       = " << (p.use_ivfpq ? "true" : "false") << "\n\n";
 
         if (p.use_lsh)
         {
-            std::cout << " [LSH mode] k=" << p.k
-                      << " L=" << p.L
-                      << " w=" << p.w << "\n";
+            std::cout << "[LSH parameters]\n";
+            std::cout << "  k (hash funcs)  = " << p.k << "\n";
+            std::cout << "  L (tables)      = " << p.L << "\n";
+            std::cout << "  w (window)      = " << p.w << "\n\n";
         }
 
         if (p.use_hypercube)
         {
-            std::cout << " [Hypercube mode] kproj=" << p.kproj
-                      << " w=" << p.w
-                      << " M=" << p.max_candidates
-                      << " probes=" << p.max_probes << "\n";
+            std::cout << "[Hypercube parameters]\n";
+            std::cout << "  kproj           = " << p.kproj << "\n";
+            std::cout << "  w               = " << p.w << "\n";
+            std::cout << "  M (max cand.)   = " << p.max_candidates << "\n";
+            std::cout << "  probes          = " << p.max_probes << "\n\n";
         }
 
         if (p.use_ivfflat)
         {
-            std::cout << " [IVFFlat mode] kclusters=" << p.kclusters
-                      << " nprobe=" << p.nprobe << "\n";
+            std::cout << "[IVFFlat parameters]\n";
+            std::cout << "  kclusters       = " << p.kclusters << "\n";
+            std::cout << "  nprobe          = " << p.nprobe << "\n\n";
         }
 
         if (p.use_ivfpq)
         {
-            std::cout << " [IVFPQ mode] kclusters=" << p.kclusters
-                      << " nprobe=" << p.nprobe
-                      << " M=" << p.pq_M
-                      << " nbits=" << p.pq_nbits << "\n";
+            std::cout << "[IVFPQ parameters]\n";
+            std::cout << "  kclusters       = " << p.kclusters << "\n";
+            std::cout << "  nprobe          = " << p.nprobe << "\n";
+            std::cout << "  M (subvectors)  = " << p.pq_M << "\n";
+            std::cout << "  nbits           = " << p.pq_nbits << "\n\n";
         }
 
-        std::cout << " range=" << (p.do_range ? "true" : "false") << "\n";
+        std::cout << "=========================\n\n";
     }
 
     /*συνάρτηση για τον υπολογισμό της ευκλείδειας απόστασης μεταξύ δύο σημείων*/

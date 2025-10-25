@@ -8,13 +8,13 @@
 namespace utils
 {
 
-    /*παράμετροι για εκτέλεση ερωτημάτων*/
+    //τελική έκδοση run_queries: precompute brute-force true results once
     template <typename IndexType>
     void run_queries(IndexType &index,
-                     const std::vector<std::vector<float>> &data,
-                     const std::vector<std::vector<float>> &queries,
-                     const Params &params,
-                     std::ofstream &out)
+                    const std::vector<std::vector<float>> &data,
+                    const std::vector<std::vector<float>> &queries,
+                    const Params &params,
+                    std::ofstream &out)
     {
         if (params.use_lsh)
             out << "LSH" << std::endl;
@@ -23,74 +23,90 @@ namespace utils
         else if (params.use_ivfpq)
             out << "IVFPQ" << std::endl;
         else if (params.use_hypercube)
-            out
-                << "Hypercube" << std::endl;
+            out << "Hypercube" << std::endl;
         else
             out << "UnknownMethod" << std::endl;
 
-        /*μετρήσεις χρόνου*/
         using clock = std::chrono::high_resolution_clock;
 
+        //προϋπολογισμός (brute-force) true distances ΜΙΑ ΦΟΡΑ για όλα τα queries
+        auto t0_true_all = clock::now();
+
+        //αποθηκεύουμε για κάθε query τα top-N true (ids + distances)
+        std::vector<std::vector<int>> true_ids_all;
+        std::vector<std::vector<double>> true_dists_all;
+        true_ids_all.resize(queries.size());
+        true_dists_all.resize(queries.size());
+
+        for (size_t qi = 0; qi < queries.size(); ++qi) {
+            const auto &q = queries[qi];
+            //υπολογισμός αποστάσεων σε όλα τα σημεία (bruteforce)
+            std::vector<std::pair<double,int>> true_scores;
+            true_scores.reserve(data.size());
+            for (size_t i = 0; i < data.size(); ++i) {
+                double dist = 0.0;
+                for (size_t d = 0; d < q.size(); ++d)
+                    dist += (q[d] - data[i][d]) * (q[d] - data[i][d]);
+                true_scores.emplace_back(std::sqrt(dist), (int)i);
+            }
+
+            //επιλέγουμε τα N μικρότερα (ή όσο υπάρχουν)
+            int denom_N = std::min(params.N, (int)true_scores.size());
+            if (denom_N > 0) {
+                std::nth_element(true_scores.begin(), true_scores.begin() + denom_N, true_scores.end(),
+                                [](auto &a, auto &b){ return a.first < b.first; });
+                true_scores.resize(denom_N);
+                std::sort(true_scores.begin(), true_scores.end(),
+                        [](auto &a, auto &b){ return a.first < b.first; });
+                //αποθηκευση ids + distances
+                true_ids_all[qi].reserve(true_scores.size());
+                true_dists_all[qi].reserve(true_scores.size());
+                for (auto &p : true_scores) {
+                    true_dists_all[qi].push_back(p.first);
+                    true_ids_all[qi].push_back(p.second);
+                }
+            } else {
+                //κενό σύνολο δεδομένων
+                true_ids_all[qi].clear();
+                true_dists_all[qi].clear();
+            }
+        }
+
+        auto t1_true_all = clock::now();
+        double tTrueTotal_ms = std::chrono::duration<double, std::milli>(t1_true_all - t0_true_all).count();
+        double tTrueAverage_ms = queries.empty() ? 0.0 : tTrueTotal_ms / queries.size();
+
+        //εκτέλεση queries με χρήση του index (approx) και χρήση των precomputed true results
         auto t0_total = clock::now();
-        double sum_AF = 0.0, sum_recall = 0.0, sum_tApprox = 0.0, sum_tTrue = 0.0;
-        /*εκτέλεση ερωτημάτων*/
-        for (size_t qi = 0; qi < queries.size(); ++qi)
-        {
+        double sum_AF = 0.0;
+        double sum_recall = 0.0;
+        double sum_tApprox = 0.0;
+
+        for (size_t qi = 0; qi < queries.size(); ++qi) {
             out << "Query: " << qi << "\n";
 
+            //approximate knn από index
             auto t0 = clock::now();
             auto knn = index.knn_query(queries[qi], params.N);
             auto t1 = clock::now();
             double tApprox_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
             sum_tApprox += tApprox_ms;
 
-            /*true distances*/
-            auto t0_true = clock::now();
-            std::vector<std::pair<double, int>> true_scores;
-            true_scores.reserve(data.size());
-            for (size_t i = 0; i < data.size(); ++i)
-            {
-                double dist = 0.0;
-                for (size_t d = 0; d < queries[qi].size(); ++d)
-                    dist += (queries[qi][d] - data[i][d]) * (queries[qi][d] - data[i][d]);
-                true_scores.emplace_back(std::sqrt(dist), (int)i);
-            }
-            /*εύρεση των N μικρότερων αποστάσεων*/
-            int denom_N = std::min(params.N, (int)true_scores.size());
-            std::nth_element(true_scores.begin(), true_scores.begin() + denom_N, true_scores.end(),
-                             [](auto &a, auto &b)
-                             { return a.first < b.first; });
-            true_scores.resize(denom_N);
-            std::sort(true_scores.begin(), true_scores.end(),
-                      [](auto &a, auto &b)
-                      { return a.first < b.first; });
-            /*αποθήκευση των αποτελεσμάτων*/
-            std::vector<int> true_ids;
-            std::vector<double> true_dists;
-            for (auto &p : true_scores)
-            {
-                true_ids.push_back(p.second);
-                true_dists.push_back(p.first);
-            }
-            /*χρόνος υπολογισμού true distances*/
-            auto t1_true = clock::now();
-            double tTrue_ms = std::chrono::duration<double, std::milli>(t1_true - t0_true).count();
-            sum_tTrue += tTrue_ms;
+            //ανακτούμε τα precomputed true αποτελέσματα για αυτό το query
+            const auto &true_ids = true_ids_all[qi];
+            const auto &true_dists = true_dists_all[qi];
 
-            /*εκτύπωση*/
+            //εκτύπωση αποτελεσμάτων approx + true (αν χρειάζεται υπολογισμός trueDist για μη-topN)
             std::vector<double> approx_dists;
             int nn_counter = 1;
-            for (auto [idx, dist] : knn)
-            {
+            for (auto [idx, dist] : knn) {
                 approx_dists.push_back(dist);
                 double trueDist = -1.0;
                 auto it = std::find(true_ids.begin(), true_ids.end(), idx);
-                if (it != true_ids.end())
-                {
+                if (it != true_ids.end()) {
                     trueDist = true_dists[it - true_ids.begin()];
-                }
-                else
-                {
+                } else {
+                    //αν το idx δεν ήταν στα top-N true, υπολογίσουμε την ακριβή απόσταση (μόνο για εμφάνιση)
                     double dsum = 0.0;
                     for (size_t d = 0; d < queries[qi].size(); ++d)
                         dsum += (queries[qi][d] - data[idx][d]) * (queries[qi][d] - data[idx][d]);
@@ -100,24 +116,27 @@ namespace utils
                 out << "distanceApproximate: " << dist << "\n";
                 out << "distanceTrue: " << trueDist << "\n";
             }
-            /*υπολογισμός AF και Recall@N*/
+
+            //υπολογισμός AF (Average Fraction) — χρησιμοποιούμε το πρώτο approx και πρώτο true
             if (!approx_dists.empty() && !true_dists.empty() && true_dists[0] > 1e-12)
                 sum_AF += approx_dists[0] / true_dists[0];
-            /*Recall@N*/
+
+            //Recall@N: πόσοι από τους true top-N υπάρχουν στα approx αποτελέσματα
             std::unordered_set<int> true_set(true_ids.begin(), true_ids.end());
             int overlap = 0;
             for (auto [id, d] : knn)
-                if (true_set.count(id))
-                    overlap++;
+                if (true_set.count(id)) overlap++;
+            int denom_N = std::min(params.N, (int)true_ids.size());
             sum_recall += (denom_N > 0) ? (double)overlap / denom_N : 0.0;
-            /*εκτύπωση χρόνων*/
-            if (params.do_range)
-            {
-                auto range = index.range_search(queries[qi], params.R); /*generic call*/
+
+            //range search (αν ζητείται)
+            if (params.do_range) {
+                auto range = index.range_search(queries[qi], params.R);
                 out << "R-near neighbors:\n";
                 for (int idx : range)
                     out << idx << "\n";
             }
+
             out << "\n";
         }
 
@@ -125,11 +144,11 @@ namespace utils
         double total_sec = std::chrono::duration<double>(t1_total - t0_total).count();
         double QPS = queries.empty() ? 0.0 : queries.size() / total_sec;
 
-        out << "Average AF: " << (sum_AF / queries.size()) << "\n";
-        out << "Recall@N: " << (sum_recall / queries.size()) << "\n";
+        out << "Average AF: " << (queries.empty() ? 0.0 : (sum_AF / queries.size())) << "\n";
+        out << "Recall@N: " << (queries.empty() ? 0.0 : (sum_recall / queries.size())) << "\n";
         out << "QPS: " << QPS << "\n";
-        out << "tApproximateAverage: " << (sum_tApprox / queries.size()) << " ms\n";
-        out << "tTrueAverage: " << (sum_tTrue / queries.size()) << " ms\n";
+        out << "tApproximateAverage: " << (queries.empty() ? 0.0 : (sum_tApprox / queries.size())) << " ms\n";
+        out << "tTrueAverage: " << tTrueAverage_ms << " ms\n";
     }
 
     /*nn*/
