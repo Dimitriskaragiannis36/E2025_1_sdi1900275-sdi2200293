@@ -1,8 +1,8 @@
 #ifndef SIFT_H
 #define SIFT_H
 
-#include <vector>
-#include <string>
+#include <vector> //std::vector
+#include <string> //std::string
 
 /*φόρτωση διανυσμάτων SIFT από δυαδικό αρχείο Little-Endian (.dat ή .fvecs).
    Μορφή εγγραφής (επαναλαμβανόμενη ανά διάνυσμα, τύπου fvecs):

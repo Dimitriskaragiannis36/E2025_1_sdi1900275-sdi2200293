@@ -1,25 +1,25 @@
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -O2 -Iinclude
+CXX = g++ #Compiler
+CXXFLAGS = -std=c++17 -Wall -O2 -Iinclude #Compiler flags
 
-TARGET = bin/search
-SRCS = $(wildcard src/*.cpp)
-OBJS = $(patsubst src/%.cpp, build/%.o, $(SRCS))
+TARGET = bin/search #στόχος εκτέλεσης
+SRCS = $(wildcard src/*.cpp) #πηγαία αρχεία
+OBJS = $(patsubst src/%.cpp, build/%.o, $(SRCS)) #αντικείμενα
 
-.PHONY: all clean run
+.PHONY: all clean run #δηλώνει τις ψευδοεντολές
 
-all: $(TARGET)
+all: $(TARGET) #προεπιλεγμένος στόχος
 
-$(TARGET): $(OBJS)
-	@mkdir -p bin
-	$(CXX) $(CXXFLAGS) -o $@ $^
+$(TARGET): $(OBJS) #σύνδεση αντικειμένων
+	@mkdir -p bin 
+	$(CXX) $(CXXFLAGS) -o $@ $^ 
 
-build/%.o: src/%.cpp
+build/%.o: src/%.cpp #μεταγλώττιση πηγαίων αρχείων
 	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-run: $(TARGET)
+run: $(TARGET) #εκτέλεση προγράμματος
 	./$(TARGET)
 
-clean:
-	rm -rf build bin plots
+clean: #καθαρισμός παραγόμενων αρχείων
+	rm -rf build bin plots 
 	rm -f results*.txt

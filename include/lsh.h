@@ -1,12 +1,13 @@
 #ifndef LSH_H
 #define LSH_H
 
-#include "helper.h" 
-#include <vector>
-#include <cstdint>
+#include "helper.h" //για DistanceFunc
+#include <vector> //για std::vector
+#include <cstdint> //για uint64_t, uint32_t
 
 namespace nn {
 
+//Κλάση για Locality Sensitive Hashing (LSH)
 class LSH {
 public:
     //κονστράκτορας με τιμές ώστε να φτιάξει τα αντικείμενα
@@ -36,13 +37,13 @@ private:
     int L_;          //αριθμός hash tables L
     int k_;          //αριθμός hash functions ανά πίνακα k
     int w_;          //μέγεθος παραθύρου w
-    unsigned int seed_;
-    utils::DistanceFunc distance_func_;
+    unsigned int seed_; //σπόρος για τυχαίους αριθμούς
+    utils::DistanceFunc distance_func_; //συνάρτηση απόστασης
 
-    static constexpr uint64_t M_ = 4294967291ULL; // μεγάλο prime κοντά στο 2^32
+    static constexpr uint64_t M_ = 4294967291ULL; //μεγάλο prime κοντά στο 2^32
 
     //για ↑ συγκρούσεις ↑ w ή ↓ k ενώ ↓ συγκρούσεις ↓ w ή ↑ k
-    int table_size_ = 1; // TableSize = n/4 ή n/8, ορίζεται στο build_index
+    int table_size_ = 1; //TableSize = n/4 ή n/8, ορίζεται στο build_index
 
     //κάθε bucket: λίστα (ID, index)
     std::vector<std::vector<std::vector<std::pair<uint64_t, int>>>> tables_;

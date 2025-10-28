@@ -1,11 +1,9 @@
 #ifndef SILHOUETTE_H
 #define SILHOUETTE_H
 
-#include "helper.h"
-#include <vector>
-#include <cstddef>
-
-using namespace std;
+#include "helper.h" //για utils::DistanceFunc και utils::euclidean_distance
+#include <vector> //για std::vector
+#include <cstddef> //για std::size_t
 
 namespace clustering {
 
@@ -16,22 +14,22 @@ public:
 
     //υπολογίζει το συνολικό μέσο silhouette score
     float compute(
-        const vector<vector<float>>& data,
-        const vector<int>& labels,
+        const std::vector<std::vector<float>>& data,
+        const std::vector<int>& labels,
         int k
     ) const;
 
     //υπολογίζει και επιστρέφει τα επιμέρους s(i)
-    vector<float> compute_per_point(
-        const vector<vector<float>>& data,
-        const vector<int>& labels,
+    std::vector<float> compute_per_point(
+        const std::vector<std::vector<float>>& data,
+        const std::vector<int>& labels,
         int k
     ) const;
 
     //υπολογίζει και επιστρέφει τα μέση silhouette score ανά cluster
-    vector<float> compute_per_cluster(
-    const vector<vector<float>>& data,
-    const vector<int>& labels,
+    std::vector<float> compute_per_cluster(
+        const std::vector<std::vector<float>>& data,
+        const std::vector<int>& labels,
     int k
     ) const;
 
@@ -39,8 +37,6 @@ public:
 private:
     utils::DistanceFunc dist_func_;
 };
-
-
 
 } //namespace clustering
 

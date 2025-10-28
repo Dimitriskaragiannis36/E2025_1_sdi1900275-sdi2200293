@@ -1,9 +1,8 @@
-#include "sift.h"
-#include <fstream>
-#include <iostream>
-#include <cstdint>
-#include <stdexcept>
-#include <limits>
+#include "sift.h" //για δηλώσεις της διεπαφής
+#include <fstream> //για std::ifstream
+#include <iostream> //για std::cerr
+#include <cstdint> //για uint32_t κλπ
+#include <stdexcept> //για std::runtime_error
 
 /* ΒΟΗΘΗΤΙΚΑ (commit 5): endianness & byte-swaps
    - is_little_endian(): true αν η μηχανή είναι Little-Endian.
@@ -17,10 +16,10 @@ static bool is_little_endian()
 
 static inline uint32_t bswap32(uint32_t v)
 {
-  return ((v & 0x000000FFu) << 24) |
-         ((v & 0x0000FF00u) << 8) |
+  return ((v & 0x000000FFu) << 24) | //αντιστροφή byte-order
+         ((v & 0x0000FF00u) << 8) | 
          ((v & 0x00FF0000u) >> 8) |
-         ((v & 0xFF000000u) >> 24);
+         ((v & 0xFF000000u) >> 24); 
 }
 
 namespace sift
@@ -48,7 +47,7 @@ namespace sift
     std::vector<std::vector<float>> data;
     data.reserve(10000); /*συντηρητική αρχικοποίηση, θα μεγαλώσει δυναμικά*/
 
-    const bool sys_le = is_little_endian();
+    const bool sys_le = is_little_endian(); //αν η μηχανή είναι LE
 
     /*Διαβάζουμε συνεχόμενες εγγραφές μέχρι EOF.
        Κάθε εγγραφή = [int32 dim][dim * float32].*/
@@ -73,9 +72,9 @@ namespace sift
 
       if (dim_raw != expected_dim)
       {
-        throw std::runtime_error(
+        throw std::runtime_error( 
             "SIFT record with unexpected dimension: " +
-            std::to_string(dim_raw) + " (expected " +
+            std::to_string(dim_raw) + " (expected " + 
             std::to_string(expected_dim) + ")");
       }
 
@@ -93,12 +92,12 @@ namespace sift
         /*Big-endian: αντιστροφή bytes στα float*/
         for (int i = 0; i < expected_dim; ++i)
         {
-          uint32_t *pi = reinterpret_cast<uint32_t *>(&v[i]);
-          *pi = bswap32(*pi);
+          uint32_t *pi = reinterpret_cast<uint32_t *>(&v[i]); //πρόσβαση στα bytes
+          *pi = bswap32(*pi); //αντιστροφή byte-order
         }
       }
 
-      data.emplace_back(std::move(v));
+      data.emplace_back(std::move(v)); //προσθήκη διανύσματος στη λίστα
 
       if (max_vectors > 0 &&
           static_cast<int>(data.size()) >= max_vectors)

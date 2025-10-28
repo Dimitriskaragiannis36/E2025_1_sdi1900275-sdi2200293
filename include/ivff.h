@@ -1,27 +1,24 @@
 #ifndef IVFF_H
 #define IVFF_H
 
-#include "helper.h"
-#include "kmeans.h"
-#include "silhouette.h"
-#include <vector>
-#include <unordered_map>
-#include <unordered_set>
-#include <random>
-#include <limits>
-#include <utility>
+#include "helper.h" //utils::DistanceFunc
+#include "kmeans.h" //kmeans::KMeans
+#include "silhouette.h" //clustering::Silhouette
+#include <vector> //std::vector
+#include <limits> //std::numeric_limits
+#include <utility> //std::pair
 
 namespace ivf {
 
 //IVF-Flat Index
 class IVFFlat {
 public: //κονστράκτορας με τιμές ώστε να φτιάξει τα αντικείμενα
-    IVFFlat(int kclusters = 4,
-            int nprobe = 5,
-            unsigned int seed = 1,
-            int N = 1,
-            float R = 2000.0f,
-            utils::DistanceFunc dist_func = nullptr);
+    IVFFlat(int kclusters = 4,  //αριθμός clusters
+            int nprobe = 5,   //αριθμός clusters που θα εξεταστούν
+            unsigned int seed = 1,  //σπόρος RNG
+            int N = 1,          //default N για knn_query 
+            float R = 2000.0f,  //default R για range_search
+            utils::DistanceFunc dist_func = nullptr);  //συνάρτηση απόστασης
 
     //κατασκευή του index
     void build_index(const std::vector<std::vector<float>>& data);
@@ -39,16 +36,16 @@ public: //κονστράκτορας με τιμές ώστε να φτιάξε�
     void clear_index();
 
     //getters
-    int nlist() const { return  kclusters_; }
-    int nprobe() const { return nprobe_; }
-    const std::vector<std::vector<float>>& centroids() const { return centroids_; }
-    const std::vector<std::vector<float>>& data() const { return *data_ptr_; }
-    utils::DistanceFunc distance_func() const { return dist_func_; }
+    int nlist() const { return  kclusters_; } //αριθμός clusters
+    int nprobe() const { return nprobe_; }  //αριθμός clusters που εξετάζονται
+    const std::vector<std::vector<float>>& centroids() const { return centroids_; } //centroids
+    const std::vector<std::vector<float>>& data() const { return *data_ptr_; }  //δεδομένα
+    utils::DistanceFunc distance_func() const { return dist_func_; }  //συνάρτηση απόστασης
 
 private:
     int kclusters_;    //αριθμός clusters
     int nprobe_;       //αριθμός clusters που εξετάζονται
-    unsigned int seed_;
+    unsigned int seed_;  //σπόρος RNG
     int N_;            //default N για KNN
     float R_;          //default R για range search
     utils::DistanceFunc dist_func_;

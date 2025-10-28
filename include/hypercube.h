@@ -1,12 +1,11 @@
 #ifndef HYPERCUBE_H
 #define HYPERCUBE_H
 
-#include "helper.h"
-#include <unordered_map>
-#include <vector>
-#include <random>
-#include <cmath>
-#include <cstdint>
+#include "helper.h" //utils::DistanceFunc
+#include <unordered_map> //std::unordered_map
+#include <vector> //std::vector
+#include <cmath> //std::floor
+#include <cstdint> //uint8_t, uint64_t
 
 namespace hcube
 {
@@ -40,8 +39,10 @@ namespace hcube
     /*πιστρέφει όλους τους υποψηφίους γείτονες που ανήκουν στις κοντινές κορυφές (ανάλογα με το Hamming distance)*/
     std::vector<int> query_candidates(const std::vector<float> &q) const;
 
-    /*πρόσβαση στα δεδομένα και στη συνάρτηση απόστασης*/
-    const std::vector<std::vector<float>> &data() const { return *data_ptr_; }
+    //επιστρέφει τα δεδομένα
+    const std::vector<std::vector<float>> &data() const { return *data_ptr_; } 
+
+     /*πρόσβαση στα δεδομένα και στη συνάρτηση απόστασης*/
     utils::DistanceFunc distance_func() const { return dist_func_; }
 
   private:

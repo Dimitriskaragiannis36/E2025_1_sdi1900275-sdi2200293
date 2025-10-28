@@ -1,13 +1,12 @@
 #ifndef MNIST_H
 #define MNIST_H
 
-#include <vector>
-#include <string>
+#include <vector>   //std::vector
+#include <string>   //std::string
 
-using namespace std;
-
-//Τemplate με προεπιλογή: Normalize = false
+//Template με προεπιλογή: Normalize = false
 template <bool Normalize = false>
-vector<vector<float>> load_mnist_images(const string &filename, int max_images = 1000);
+//Φορτώνει εικόνες MNIST από το αρχείο filename
+std::vector<std::vector<float>> load_mnist_images(const std::string& filename, int max_images = 1000);
 
 #endif //MNIST_H

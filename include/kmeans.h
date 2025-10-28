@@ -1,17 +1,17 @@
 #ifndef KMEANS_H
 #define KMEANS_H
 
-#include "helper.h"
-#include <vector>
-#include <cstddef>
-#include <random>
+#include "helper.h" //για utils::DistanceFunc και utils::euclidean_distance
+#include <vector> //για std::vector
+#include <cstddef> //για std::size_t
+#include <random> //για std::mt19937
 
 namespace clustering {
 
 //k-Means clustering
 class KMeans {
 public:
-    enum class InitMethod { RANDOM, KMEANS_PLUS_PLUS };
+    enum class InitMethod { RANDOM, KMEANS_PLUS_PLUS }; //μέθοδοι αρχικοποίησης
 
     //κονστράκτορας
     KMeans(int k, int max_iters = 300, float tol = 1e-4f,
@@ -35,9 +35,9 @@ public:
     void clear();
 
     //getters
-    int k() const { return k_; }
-    int max_iters() const { return max_iters_; }
-    float tol() const { return tol_; }
+    int k() const { return k_; } //αριθμός κλάσεων
+    int max_iters() const { return max_iters_; } //μέγιστος αριθμός επαναλήψεων
+    float tol() const { return tol_; } //κατώφλι σύγκλισης
 
 private:
     int k_; //αριθμός κλάσεων
