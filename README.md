@@ -61,7 +61,7 @@
 ### Ρίζα project
 - **Makefile** — κανόνες μεταγλώττισης του προγράμματος.  
 - **README.md** — το παρόν αρχείο οδηγιών.  
-- **plot_results.py** — script για παραγωγή γραφημάτων από τα αποτελέσματα.  
+- **plot_results.py** — script για παραγωγή γραφημάτων και πινάκων από τα αποτελέσματα.  
 - **data/** — φάκελος με τα datasets MNIST και SIFT.  
 - **include/** — φάκελος με τα headers (.h, .tpp).  
 - **src/** — φάκελος με τα αρχεία πηγαίου κώδικα (.cpp).  
@@ -140,40 +140,55 @@
 Γράφουμε στην γραμμή εντολών:
 
 **LSH**
-./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -k 4 -L 5 -w 4.0 -o results_lsh_mnist.txt -N 1 -R 2000 -type mnist -lsh -range false
+./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -k 4 -L 5 -w 4.0 -o results_lsh_mnist_false.txt -N 1 -R 2000 -type mnist -lsh -range false
 
-./bin/search -d data/sift/input.dat -q data/sift/query.dat -k 4 -L 5 -w 4.0 -o results_lsh_sift.txt -N 1 -R 2 -type sift -lsh -range false
+./bin/search -d data/sift/input.dat -q data/sift/query.dat -k 4 -L 5 -w 4.0 -o results_lsh_sift_false.txt -N 1 -R 2 -type sift -lsh -range false
+
+./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -k 4 -L 5 -w 4.0 -o results_lsh_mnist_true.txt -N 1 -R 2000 -type mnist -lsh -range true
+
+./bin/search -d data/sift/input.dat -q data/sift/query.dat -k 4 -L 5 -w 4.0 -o results_lsh_sift_true.txt -N 1 -R 2 -type sift -lsh -range true
 
 
 **HYPERCUBE**
-./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kproj 14 -w 4 -M 10 -probes 2 -o results_hypercube_mnist.txt -N 1 -R 2000 -type mnist -range false -hypercube 
+./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kproj 14 -w 4 -M 10 -probes 2 -o results_hypercube_mnist_false.txt -N 1 -R 2000 -type mnist -range false -hypercube 
 
-./bin/search -d data/sift/input.dat -q data/sift/query.dat -kproj 14 -w 4 -M 10 -probes 2 -o results_hypercube_sift.txt -N 1 -R 2 -type sift -range false -hypercube
+./bin/search -d data/sift/input.dat -q data/sift/query.dat -kproj 14 -w 4 -M 10 -probes 2 -o results_hypercube_sift_false.txt -N 1 -R 2 -type sift -range false -hypercube
+
+./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kproj 14 -w 4 -M 10 -probes 2 -o results_hypercube_mnist_true.txt -N 1 -R 2000 -type mnist -range true -hypercube 
+
+./bin/search -d data/sift/input.dat -q data/sift/query.dat -kproj 14 -w 4 -M 10 -probes 2 -o results_hypercube_sift_true.txt -N 1 -R 2 -type sift -range true -hypercube
 
 
 **IVFFLAT**
-./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kclusters 50 -nprobe 5 -o results_ivfflat_mnist.txt -N 1 -R 2000 -type mnist -range false -ivfflat -seed 1
+./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kclusters 50 -nprobe 5 -o results_ivfflat_mnist_false.txt -N 1 -R 2000 -type mnist -range false -ivfflat -seed 1
 
-./bin/search -d data/sift/input.dat -q data/sift/query.dat -kclusters 50 -nprobe 5 -o results_ivfflat_sift.txt -N 1 -R 2 -type sift -range false -ivfflat -seed 1
+./bin/search -d data/sift/input.dat -q data/sift/query.dat -kclusters 50 -nprobe 5 -o results_ivfflat_sift_false.txt -N 1 -R 2 -type sift -range false -ivfflat -seed 1
+
+./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kclusters 50 -nprobe 5 -o results_ivfflat_mnist_true.txt -N 1 -R 2000 -type mnist -range true -ivfflat -seed 1
+
+./bin/search -d data/sift/input.dat -q data/sift/query.dat -kclusters 50 -nprobe 5 -o results_ivfflat_sift_true.txt -N 1 -R 2 -type sift -range true -ivfflat -seed 1
 
 
 **IVFPQ**
-./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kclusters 50 -nprobe 5 -M 16 -nbits 8 -o results_ivfpq_mnist.txt -N 1 -R 2000 -type mnist -range false -ivfpq -seed 1
+./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kclusters 50 -nprobe 5 -M 16 -nbits 8 -o results_ivfpq_mnist_false.txt -N 1 -R 2000 -type mnist -range false -ivfpq -seed 1
 
-./bin/search -d data/sift/input.dat -q data/sift/query.dat -kclusters 50 -nprobe 5 -M 16 -nbits 8 -o results_ivfpq_sift.txt -N 1 -R 2 -type sift -range false -ivfpq -seed 1
+./bin/search -d data/sift/input.dat -q data/sift/query.dat -kclusters 50 -nprobe 5 -M 16 -nbits 8 -o results_ivfpq_sift_false.txt -N 1 -R 2 -type sift -range false -ivfpq -seed 1
 
+./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kclusters 50 -nprobe 5 -M 16 -nbits 8 -o results_ivfpq_mnist_true.txt -N 1 -R 2000 -type mnist -range true -ivfpq -seed 1
+
+./bin/search -d data/sift/input.dat -q data/sift/query.dat -kclusters 50 -nprobe 5 -M 16 -nbits 8 -o results_ivfpq_sift_true.txt -N 1 -R 2 -type sift -range true -ivfpq -seed 1
 
 
 
 
 **Τα αποτελέσματα αποθηκεύονται στα αρχεία results*.txt όπως δηλώνονται στα flags.**
 
-και στο τέλος για την παραγωγή των διαγραμμάτων:
+και στο τέλος για την παραγωγή των διαγραμμάτων και πίνακα:
 
 **ΓΙΑ ΤΑ PLOTS**
 python3 plot_results.py
 
-**Όλα τα διαγράμματα αποθηκεύονται στον φάκελο plots (Μάλιστα υπάρχει και pdf που τα ενσωματώνει όλα).**
+**Όλα τα διαγράμματα αποθηκεύονται στον φάκελο plots (Μάλιστα υπάρχει και pdf που τα ενσωματώνει όλα) και υπάρχουν και αρχεία πινάκων .xlsx και .csv.**
 
 **Τα flags θα λάβουν τιμές ανάλογα με την εκφώνηση της άσκησης και φυσικά τις απαιτήσεις-προσδοκίες του εκάστοτε χρήστη.**
 
