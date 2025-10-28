@@ -21,14 +21,14 @@ int main(int argc, char *argv[])
 
     if (params.type == "mnist")
     {
-        data = load_mnist_images(params.input_file, 1000); //φόρτωση έως 1000 εικόνες MNIST
-        queries = load_mnist_images(params.query_file, 10); //φόρτωση έως 10 ερωτήματα
+        data = load_mnist_images(params.input_file, 10000); //φόρτωση έως 10000 εικόνες MNIST
+        queries = load_mnist_images(params.query_file, 100); //φόρτωση έως 100 ερωτήματα
     }
     else if (params.type == "sift")
     {
         /*δεν περιορίζουμε την ανάγνωση (όλα τα vectors) — βάλτους όριο αν θέλεις*/
-        int maxN = 1000; //π.χ. φόρτωση έως 1000 διανύσματα
-        int maxQ = 10; //π.χ. φόρτωση έως 10 ερωτήματα
+        int maxN = 10000; //π.χ. φόρτωση έως 10000 διανύσματα
+        int maxQ = 100; //π.χ. φόρτωση έως 100 ερωτήματα
 
         if (!params.input_file.empty())
         {
