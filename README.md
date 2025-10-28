@@ -140,27 +140,29 @@
 Γράφουμε στην γραμμή εντολών:
 
 **LSH**
-./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -k 4 -L 5 -w 4.0 -o results_lsh_mnist.txt -N 3 -R 2000 -type mnist -lsh -range false
+./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -k 4 -L 5 -w 4.0 -o results_lsh_mnist.txt -N 1 -R 2000 -type mnist -lsh -range false
 
-./bin/search -d data/sift/input.dat -q data/sift/query.dat -k 4 -L 5 -w 4.0 -o results_lsh_sift.txt -N 3 -R 2000 -type sift -lsh -range false
+./bin/search -d data/sift/input.dat -q data/sift/query.dat -k 4 -L 5 -w 4.0 -o results_lsh_sift.txt -N 1 -R 2 -type sift -lsh -range false
 
 
 **HYPERCUBE**
-./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kproj 14 -w 4 -M 10 -probes 2 -o results_hypercube_mnist.txt -N 3 -R 2000 -type mnist -range false -hypercube 
+./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kproj 14 -w 4 -M 10 -probes 2 -o results_hypercube_mnist.txt -N 1 -R 2000 -type mnist -range false -hypercube 
 
-./bin/search -d data/sift/input.dat -q data/sift/query.dat -kproj 14 -w 4 -M 10 -probes 2 -o results_hypercube_sift.txt -N 3 -R 2000 -type sift -range false -hypercube
+./bin/search -d data/sift/input.dat -q data/sift/query.dat -kproj 14 -w 4 -M 10 -probes 2 -o results_hypercube_sift.txt -N 1 -R 2 -type sift -range false -hypercube
 
 
 **IVFFLAT**
-./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kclusters 50 -nprobe 5 -o results_ivfflat_mnist.txt -N 3 -R 2000 -type mnist -range false -ivfflat -seed 1
+./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kclusters 50 -nprobe 5 -o results_ivfflat_mnist.txt -N 1 -R 2000 -type mnist -range false -ivfflat -seed 1
 
-./bin/search -d data/sift/input.dat -q data/sift/query.dat -kclusters 50 -nprobe 5 -o results_ivfflat_sift.txt -N 3 -R 2000 -type sift -range false -ivfflat -seed 1
+./bin/search -d data/sift/input.dat -q data/sift/query.dat -kclusters 50 -nprobe 5 -o results_ivfflat_sift.txt -N 1 -R 2 -type sift -range false -ivfflat -seed 1
 
 
 **IVFPQ**
-./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kclusters 100 -nprobe 5 -M 16 -nbits 8 -o results_ivfpq_mnist.txt -N 3 -R 2000 -type mnist -range false -ivfpq -seed 1
+./bin/search -d data/mnist/input.dat -q data/mnist/query.dat -kclusters 50 -nprobe 5 -M 16 -nbits 8 -o results_ivfpq_mnist.txt -N 1 -R 2000 -type mnist -range false -ivfpq -seed 1
 
-./bin/search -d data/sift/input.dat -q data/sift/query.dat -kclusters 100 -nprobe 5 -M 16 -nbits 8 -o results_ivfpq_sift.txt -N 3 -R 2000 -type sift -range false -ivfpq -seed 1
+./bin/search -d data/sift/input.dat -q data/sift/query.dat -kclusters 50 -nprobe 5 -M 16 -nbits 8 -o results_ivfpq_sift.txt -N 1 -R 2 -type sift -range false -ivfpq -seed 1
+
+
 
 
 
