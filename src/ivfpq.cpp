@@ -238,41 +238,53 @@ namespace ivf
     return r;
   }
 
-  //κατασκευή ευρετηρίου
-  void IVFPQ::build_index(const std::vector<std::vector<float>> &data)
-  {
+  // Κατασκευή ευρετηρίου IVFPQ
+  void IVFPQ::build_index(const std::vector<std::vector<float>> &data) {
     if (data.empty()) //τίποτα για ευρετήριο
-      return;
+        return;
 
     data_ptr_ = &data; //αποθήκευση δείκτη στα δεδομένα
     size_t n = data.size(); //αριθμός δεδομένων
 
-    /* 1) επιλογή k μέσω silhouette αν χρειάζεται */
-    int k_opt = kclusters_; //αρχική τιμή k
-    if (k_opt <= 0) //αυτόματη επιλογή k
-    {
-      int k_min = 2; //ελάχιστο k
-      int k_max = std::min<int>(10, std::sqrt(n)); //μέγιστο k
-      using namespace clustering; //για KMeans και Silhouette
-      float best_score = -1.0f; //καλύτερο silhouette score
-      int best_k = k_min; //καλύτερο k
-      for (int k = k_min; k <= k_max; ++k)
-      {
-        KMeans kmeans(k, 100, 1e-4f, KMeans::InitMethod::KMEANS_PLUS_PLUS, seed_, false, dist_func_); //KMeans
-        kmeans.fit(data); //εκπαίδευση
-        Silhouette sil(dist_func_); //Silhouette
-        float s = sil.compute(data, kmeans.labels(), k); //υπολογισμός silhouette score
-        if (s > best_score)
-        {
-          best_score = s; //ενημέρωση καλύτερου score
-          best_k = k; //ενημέρωση καλύτερου k
-        }
-      }
-      k_opt = best_k; //επιλογή καλύτερου k
-      std::cerr << "[IVFPQ] Selected k=" << k_opt << " via silhouette.\n";
-    }
-    kclusters_ = k_opt; //ορισμός τελικού k
+    //1) Επιλογή k μέσω silhouette αν δεν έχει οριστεί
+    int k_opt = kclusters_; //αρχική τιμή k από χρήστη
+    if (k_opt <= 0) { //αυτόματη επιλογή k
+        int k_min = 2; //ελάχιστο k
+        int k_max = std::min<int>(10, std::sqrt(n)); //μέγιστο k
 
+        std::cerr << "[IVFPQ] Selecting best k via Silhouette in range ["
+                    << k_min << "," << k_max << "]...\n";
+
+        using namespace clustering; //για KMeans και Silhouette
+        float best_score = -1.0f; //καλύτερο silhouette score
+        int best_k = k_min; //καλύτερο k
+
+        for (int k = k_min; k <= k_max; ++k) {
+            KMeans kmeans(k, 100, 1e-4f,
+                            KMeans::InitMethod::KMEANS_PLUS_PLUS,
+                            seed_, false, dist_func_); //KMeans αρχικοποίηση
+          kmeans.fit(data); //εκπαίδευση
+
+          Silhouette sil(dist_func_); //Silhouette αντικείμενο
+          float score = sil.compute(data, kmeans.labels(), k); //υπολογισμός score
+
+          std::cerr << "[Silhouette] k=" << k
+                        << " score=" << score << std::endl;
+
+          if (score > best_score) {
+                best_score = score;
+                best_k = k; //ενημέρωση καλύτερου k
+          }
+      }
+
+      k_opt = best_k; //επιλογή καλύτερου k
+      std::cerr << "[Silhouette] Best k=" << k_opt
+                    << " (score=" << best_score << ")\n";
+    }
+
+    kclusters_ = k_opt; //ορισμός τελικού k
+    std::cerr << "[IVFPQ] Final kclusters_ set to " << kclusters_ << "\n";
+  
     /* 2) K-Means σε υποσύνολο για coarse quantizer */
     size_t subset_size = std::max<size_t>(kclusters_, (size_t)std::sqrt(n)); //μέγεθος υποσυνόλου
     std::mt19937 rng(seed_); //RNG με δοσμένο σπόρο
