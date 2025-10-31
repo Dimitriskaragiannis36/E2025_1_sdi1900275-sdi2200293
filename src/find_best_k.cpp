@@ -54,7 +54,7 @@ int main(int argc, char** argv) { //κύρια συνάρτηση
     std::cout << "Loaded " << data.size() << " samples.\n";
 
     //τιμές του k για τις οποίες θα υπολογίσουμε το silhouette score
-    std::vector<int> k_values = {2, 3, 4, 5, 6, 7, 8, 9, 10};
+    std::vector<int> k_values = {2, 5, 10, 50, 100, 200, 500};
     Silhouette silhouette;
 
     //δημιουργία του ονόματος του αρχείου output βασισμένο στο dataset
