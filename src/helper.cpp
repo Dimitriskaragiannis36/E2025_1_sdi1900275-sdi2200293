@@ -74,10 +74,16 @@ namespace utils
         }
 
         /*προεπιλεγμένο R ανάλογα με το σύνολο δεδομένων*/
-        if (p.type == "sift") 
-            p.R = 2.0f; //προεπιλεγμένο R για SIFT
-        else
-            p.R = 2000.0f; //προεπιλεγμένο R για MNIST ή άλλα
+        if (p.type == "sift") {
+            p.R = 2.0f;
+        }
+        else if (p.type == "mnist") {
+            //αν το MNIST είναι κανονικοποιημένο, R=2, αλλιώς R=2000
+            p.R = utils::MNIST_NORMALIZED ? 2.0f : 2000.0f;
+        }
+        else { //σε περίπτωση άγνωστου τύπου, θέτουμε R=2000.0f
+            p.R = 2000.0f;
+        }
 
         return p;
     }

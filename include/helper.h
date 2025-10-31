@@ -12,6 +12,9 @@ namespace utils
     /*τύπος για συνάρτηση απόστασης*/
     using DistanceFunc = std::function<float(const std::vector<float> &, const std::vector<float> &)>;
 
+    //σταθερά για το αν κανονικοποιούμε MNIST ----
+    constexpr bool MNIST_NORMALIZED = false;
+    
     /*παράμετροι από γραμμή εντολών (και default τιμές) για ασφάλεια*/
     struct Params
     {

@@ -109,6 +109,10 @@ namespace sift
     if (data.empty())
       std::cerr << "Warning: no vectors read from " << filename << "\n";
 
+    //εκτύπωση πληροφοριών για το αρχείο SIFT
+    std::cout << "SIFT file: " << data.size() << " vectors, "
+              << expected_dim << " dimensions each.\n";
+              
     return data;
   }
 

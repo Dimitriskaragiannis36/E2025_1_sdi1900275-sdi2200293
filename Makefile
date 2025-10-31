@@ -1,25 +1,36 @@
-CXX = g++ #Compiler
-CXXFLAGS = -std=c++17 -Wall -O2 -Iinclude #Compiler flags
+CXX = g++ #μεταγλωττιστής C++
+CXXFLAGS = -std=c++17 -Wall -O2 -Iinclude #σημαίες μεταγλώττισης
 
-TARGET = bin/search #στόχος εκτέλεσης
-SRCS = $(wildcard src/*.cpp) #πηγαία αρχεία
-OBJS = $(patsubst src/%.cpp, build/%.o, $(SRCS)) #αντικείμενα
+TARGET = bin/search #όνομα του εκτελέσιμου αρχείου
+SRCS = $(wildcard src/*.cpp) #όλα τα αρχεία πηγαίου κώδικα
+OBJS = $(patsubst src/%.cpp, build/%.o, $(SRCS)) #αρχεία αντικειμένου
 
 .PHONY: all clean run #δηλώνει τις ψευδοεντολές
 
-all: $(TARGET) #προεπιλεγμένος στόχος
+all: $(TARGET) bin/find_best_k #προεπιλεγμένος στόχος
 
-$(TARGET): $(OBJS) #σύνδεση αντικειμένων
-	@mkdir -p bin 
-	$(CXX) $(CXXFLAGS) -o $@ $^ 
+#χτίσιμο του κύριου εκτελέσιμου αρχείου
+$(TARGET): $(filter-out build/find_best_k.o,$(OBJS))
+	@mkdir -p bin
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
-build/%.o: src/%.cpp #μεταγλώττιση πηγαίων αρχείων
+#χτίσιμο των αρχείων αντικειμένου
+build/%.o: src/%.cpp
 	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-run: $(TARGET) #εκτέλεση προγράμματος
+#χτίσιμο του εκτελέσιμου αρχείου για την εύρεση του καλύτερου k
+bin/find_best_k: build/find_best_k.o $(filter-out build/find_best_k.o build/main.o,$(OBJS))
+	@mkdir -p bin
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+#εκτέλεση του προγράμματος
+run: $(TARGET)
 	./$(TARGET)
 
-clean: #καθαρισμός παραγόμενων αρχείων
-	rm -rf build bin plots 
+#καθαρισμός των παραγόμενων αρχείων
+clean:
+	rm -rf build bin plots
 	rm -f results*.txt
+	rm -f silhouette*
+	
