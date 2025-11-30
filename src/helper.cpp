@@ -36,38 +36,42 @@ namespace utils
             else if (arg == "-seed" && i + 1 < argc)
                 p.seed = atoi(argv[++i]); //αρχικοποίηση γεννήτριας τυχαίων αριθμών
 
-            /*hypercube και κοινά switches*/
+            /* --- Hypercube & κοινά switches --- */
             else if (arg == "-hypercube")
-                p.use_hypercube = true; //αν θα χρησιμοποιηθεί Hypercube
+                p.use_hypercube = true;
             else if (arg == "-kproj" && i + 1 < argc)
-                p.kproj = std::stoi(argv[++i]); //αριθμός διαστάσεων προβολής
-            else if (arg == "-M" && i + 1 < argc) 
+                p.kproj = std::stoi(argv[++i]);
+            else if (arg == "-M" && i + 1 < argc)
             {
-                /*Σημείωση: Το -M είναι είτε το max_candidates του Hypercube είτε το M του IVFPQ.
-                    Το αποθηκεύουμε και στα δύο. Το ενεργό εξαρτάται από τη λειτουργία.*/
                 int val = std::stoi(argv[++i]);
-                p.max_candidates = val; //μέγιστος αριθμός υποψηφίων (Hypercube)
-                p.pq_M = val;   //αριθμός υποδιανυσμάτων M (IVFPQ)
+                p.max_candidates = val;
+                p.pq_M = val; // shared meaning
             }
             else if (arg == "-probes" && i + 1 < argc)
-                p.max_probes = std::stoi(argv[++i]); //μέγιστος αριθμός probes
+                p.max_probes = std::stoi(argv[++i]);
 
-            /*νέα flags για IVFFlat / IVFPQ*/
+            /* --- IVFFlat / IVFPQ --- */
             else if (arg == "-ivfflat")
-                p.use_ivfflat = true; //αν θα χρησιμοποιηθεί IVFFlat
+                p.use_ivfflat = true;
             else if (arg == "-ivfpq")
-                p.use_ivfpq = true; //αν θα χρησιμοποιηθεί IVFPQ
+                p.use_ivfpq = true;
             else if (arg == "-kclusters" && i + 1 < argc)
-                p.kclusters = atoi(argv[++i]); //αριθμός κέντρων (clusters)
+                p.kclusters = atoi(argv[++i]);
             else if (arg == "-nprobe" && i + 1 < argc)
-                p.nprobe = atoi(argv[++i]); //αριθμός probes
+                p.nprobe = atoi(argv[++i]);
             else if (arg == "-nbits" && i + 1 < argc)
-                p.pq_nbits = atoi(argv[++i]); //μέγεθος codebook = 2^nbits ανά υπο-διανύσμα
-            /*LSH*/
+                p.pq_nbits = atoi(argv[++i]);
+
+            /* --- LSH --- */
             else if (arg == "-lsh")
-                p.use_lsh = true; //αν θα χρησιμοποιηθεί LSH
-            /*άγνωστη παράμετρος*/
-            else 
+                p.use_lsh = true;
+
+            /* --- KNN Graph Mode (New!) --- */
+            else if (arg == "-knngraph" || arg == "--knn-graph-mode")
+                p.knn_graph_mode = true;
+
+            /* άγνωστη παράμετρος */
+            else
             {
                 std::cerr << "Warning: Unknown argument '" << arg << "' ignored.\n";
             }
@@ -78,10 +82,9 @@ namespace utils
             p.R = 2.0f;
         }
         else if (p.type == "mnist") {
-            //αν το MNIST είναι κανονικοποιημένο, R=2, αλλιώς R=2000
             p.R = utils::MNIST_NORMALIZED ? 2.0f : 2000.0f;
         }
-        else { //σε περίπτωση άγνωστου τύπου, θέτουμε R=2000.0f
+        else {
             p.R = 2000.0f;
         }
 

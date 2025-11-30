@@ -18,7 +18,8 @@ public: //κονστράκτορας με τιμές ώστε να φτιάξε�
             unsigned int seed = 1,  //σπόρος RNG
             int N = 1,          //default N για knn_query 
             float R = 2000.0f,  //default R για range_search
-            utils::DistanceFunc dist_func = nullptr);  //συνάρτηση απόστασης
+            utils::DistanceFunc dist_func = nullptr,   // συνάρτηση απόστασης
+            int mode = 0);           // <-- ΝΕΑ ΠΑΡΑΜΕΤΡΟΣ (0=normal IVF, 1=new mode)
 
     //κατασκευή του index
     void build_index(const std::vector<std::vector<float>>& data);
@@ -50,11 +51,20 @@ private:
     float R_;          //default R για range search
     utils::DistanceFunc dist_func_;
 
+    // <-- ΝΕΑ ΜΕΤΑΒΛΗΤΗ ΓΙΑ mode
+    int mode_;   // 0 = IVF Flat, 1 = νέο mode (ό,τι υλοποιήσεις)
+
     std::vector<std::vector<float>> centroids_;     //C = {c1, ..., ck}
     std::vector<std::vector<int>> inverted_lists_;  //IL_j = ids των points
     const std::vector<std::vector<float>>* data_ptr_; //pointer στα data
 
 };
+
+void compute_and_output_knn_graph(ivf::IVFFlat& index,
+                                  const std::vector<std::vector<float>>& data,
+                                  int k,
+                                  const std::string& dataset_name);
+
 
 } //namespace ivf
 

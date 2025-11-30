@@ -49,6 +49,9 @@ namespace utils
         bool use_ivfpq = false; //αν θα χρησιμοποιηθεί IVFPQ
         int pq_M = 16;    /*αριθμός υποδιανυσμάτων M*/
         int pq_nbits = 8; /*μέγεθος codebook = 2^nbits ανά υπο-διανύσμα*/
+
+        /*KNN Graph Mode — ΝΕΟ*/
+        bool knn_graph_mode = false;
     };
 
     //ανάλυση παραμέτρων από γραμμή εντολών

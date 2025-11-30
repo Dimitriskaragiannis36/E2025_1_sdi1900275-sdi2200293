@@ -2,17 +2,20 @@
 #include <algorithm> //std::sort, std::nth_element
 #include <iostream> //std::cout, std::cerr
 #include <cmath> //std::sqrt
+#include <fstream>
 
 namespace ivf {
 
 //κονστράκτορας 
-IVFFlat::IVFFlat(int kclusters, int nprobe, unsigned int seed, int N, float R, utils::DistanceFunc dist_func)
+IVFFlat::IVFFlat(int kclusters, int nprobe, unsigned int seed, int N, float R,
+                 utils::DistanceFunc dist_func, int mode)
     : kclusters_(kclusters),
       nprobe_(nprobe),
       seed_(seed),
       N_(N),
       R_(R),
-      dist_func_(dist_func ? dist_func : utils::euclidean_distance) //αν δεν δοθεί, default
+      dist_func_(dist_func ? dist_func : utils::euclidean_distance),
+      mode_(mode) // <-- αποθήκευση νέου mode
 {
     std::cout << "IVFFlat initialized with kclusters=" << kclusters_ 
               << ", nprobe=" << nprobe_
@@ -181,5 +184,35 @@ void IVFFlat::clear_index() {
     data_ptr_ = nullptr; //αφαίρεση pointer στα δεδομένα
     std::cerr << "[IVF] Index cleared.\n";
 }
+
+void compute_and_output_knn_graph(ivf::IVFFlat& index,
+                                  const std::vector<std::vector<float>>& data,
+                                  int k,
+                                  const std::string& dataset_name)
+{
+    std::cout << "\n>> K-NN Graph Mode: computing " << k << "-NN graph for " 
+              << dataset_name << "...\n";
+
+    // Το όνομα αρχείου βασισμένο στο dataset
+    std::string filename = "knn_graph_" + dataset_name + ".csv";
+    std::ofstream fout(filename);
+    if (!fout.is_open()) {
+        std::cerr << "Error: could not open " << filename << "\n";
+        return;
+    }
+
+    for (int i = 0; i < (int)data.size(); i++) {
+        auto neighbors = index.knn_query(data[i], k); // σωστή κλήση
+
+        fout << i;
+        for (auto& nb : neighbors)
+            fout << "," << nb.first;   // neighbor id
+        fout << "\n";
+    }
+
+    fout.close();
+    std::cout << ">> Saved " << filename << "\n";
+}
+
 
 } //namespace ivf

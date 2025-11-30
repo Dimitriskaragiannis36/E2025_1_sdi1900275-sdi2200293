@@ -51,13 +51,16 @@ int main(int argc, char *argv[])
         return 1;
     }
     /*δημιουργία αλγορίθμου αναζήτησης (LSH ή IVFFlat ή IVFPQ)*/
-    std::ofstream out(params.output_file);
-    if (!out.is_open())
-    {
-        std::cerr << "Error opening output file!\n";
-        return 1;
+    std::ofstream out;
+    if (!params.knn_graph_mode) {
+        out.open(params.output_file);
+        if (!out.is_open())
+        {
+            std::cerr << "Error opening output file!\n";
+            return 1;
+        }
+        out << std::fixed << std::setprecision(6); //6 δεκαδικά ψηφία στην έξοδο
     }
-    out << std::fixed << std::setprecision(6); //6 δεκαδικά ψηφία στην έξοδο
 
     auto dim = static_cast<int>(data[0].size());
     /*εκτέλεση lsh*/
@@ -93,6 +96,10 @@ int main(int argc, char *argv[])
         ivf::IVFFlat index(params.kclusters, params.nprobe, params.seed, params.N, params.R); //δημιουργία IVFFlat αντικειμένου
 
         index.build_index(data); //κατασκευή ευρετηρίου
+        if (params.knn_graph_mode) {
+            compute_and_output_knn_graph(index, data, params.k, params.type);
+            return 0;
+        }
         utils::run_queries(index, data, queries, params, out); //εκτέλεση ερωτημάτων
         index.clear_index(); //καθαρισμός ευρετηρίου
     }
